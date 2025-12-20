@@ -18,18 +18,18 @@ DEFAULT_CONFIG = {
     "y": 730,
     "font_size": 18,
     "font_color": "#00FF00",     # 默认亮绿色
-    "text_prefix": "FRIEND: ",   # 前缀文本
-    "update_interval": 0.3       # 默认 0.3秒
+    "text_prefix": "IAS: ",      # 前缀文本
+    "update_rate": 30            # 默认 30 Hz
 }
 
-APP_NAME = "WTFriendCounter"     # 在 AppData 里创建的文件夹名
+APP_NAME = "WTOverlay"     # 在 AppData 里创建的文件夹名
 FONT_NAME = "Consolas" 
 # ===========================================
 
 class OverlayApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("WT Friend Counter")
+        self.root.title("WT Speed Monitor")
         
         # 1. 路径处理：使用 AppData (行业标准)
         self.config_path = self.get_config_path()
@@ -106,7 +106,7 @@ class OverlayApp:
             return
 
         self.setting_win = tk.Toplevel(self.root)
-        self.setting_win.title("设置 - 战雷计数器")
+        self.setting_win.title("设置 - 战雷速度监视器")
         self.setting_win.geometry("340x380")
         self.setting_win.attributes("-topmost", True)
         
@@ -115,7 +115,7 @@ class OverlayApp:
         # 1. 文本前缀
         tk.Label(self.setting_win, text="显示前缀:").pack(**pad_opts)
         self.entry_prefix = tk.Entry(self.setting_win, width=30)
-        self.entry_prefix.insert(0, self.cfg['text_prefix'])
+        self.entry_prefix.insert(0, self.cfg.get('text_prefix', "IAS: "))
         self.entry_prefix.pack()
 
         # 2. 字号大小
@@ -125,10 +125,10 @@ class OverlayApp:
         self.scale_size.pack()
 
         # 3. 刷新频率
-        tk.Label(self.setting_win, text="刷新频率 (秒):").pack(**pad_opts)
-        self.scale_interval = tk.Scale(self.setting_win, from_=0.1, to=2.0, resolution=0.1, orient=tk.HORIZONTAL, length=200)
-        self.scale_interval.set(self.cfg.get('update_interval', 0.3))
-        self.scale_interval.pack()
+        tk.Label(self.setting_win, text="刷新频率 (Hz/次每秒):").pack(**pad_opts)
+        self.scale_rate = tk.Scale(self.setting_win, from_=5, to=30, resolution=1, orient=tk.HORIZONTAL, length=200)
+        self.scale_rate.set(self.cfg.get('update_rate', 30))
+        self.scale_rate.pack()
 
         # 4. 颜色选择
         tk.Label(self.setting_win, text="文字颜色 (Hex):").pack(**pad_opts)
@@ -185,7 +185,7 @@ class OverlayApp:
             self.entry_prefix.insert(0, self.cfg['text_prefix'])
             
             self.scale_size.set(self.cfg['font_size'])
-            self.scale_interval.set(self.cfg['update_interval'])
+            self.scale_rate.set(self.cfg['update_rate'])
             
             self.entry_hex.delete(0, tk.END)
             self.entry_hex.insert(0, self.cfg['font_color'])
@@ -204,7 +204,7 @@ class OverlayApp:
     def apply_settings(self):
         new_prefix = self.entry_prefix.get()
         new_size = self.scale_size.get()
-        new_interval = self.scale_interval.get()
+        new_rate = self.scale_rate.get()
         new_color = self.entry_hex.get()
         
         try:
@@ -216,7 +216,7 @@ class OverlayApp:
         self.cfg['text_prefix'] = new_prefix
         self.cfg['font_size'] = new_size
         self.cfg['font_color'] = new_color
-        self.cfg['update_interval'] = new_interval
+        self.cfg['update_rate'] = new_rate
         
         # 应用
         self.label.config(font=(FONT_NAME, new_size, "bold"), fg=new_color)
@@ -242,6 +242,9 @@ class OverlayApp:
                     config.update(saved)
             except:
                 pass
+        # 兼容性处理：如果 update_rate 不存在，使用默认值
+        if 'update_rate' not in config:
+            config['update_rate'] = 30
         return config
 
     def save_config_file(self):
@@ -268,7 +271,7 @@ class OverlayApp:
             item('重置位置 (Reset Pos)', self.reset_position),
             item('退出 (Exit)', self.quit_app)
         )
-        self.icon = pystray.Icon("WT_Counter", image, "战雷友军计数器", menu)
+        self.icon = pystray.Icon("WT_Counter", image, "战雷速度监视器", menu)
         self.icon.run()
 
     def open_settings_window_safely(self, icon=None, item=None):
@@ -321,39 +324,37 @@ class OverlayApp:
         if self.root.state() == 'normal':
             self.label.config(text=text)
 
-    def get_friend_count(self):
-        COLOR_FRIENDLY = [23, 77, 255] # 蓝色
-        COLOR_SQUAD    = [57, 217, 33] # 绿色
+    def get_ias(self):
         try:
-            response = requests.get('http://127.0.0.1:8111/map_obj.json', timeout=0.2)
+            # timeout 0.05s for high frequency polling
+            response = requests.get('http://127.0.0.1:8111/state', timeout=0.05)
             data = response.json()
-            count = 0
-            for obj in data:
-                if obj.get('type') == 'aircraft':
-                    if obj.get('icon') == 'Player':
-                        continue
-                    color = obj.get('color[]')
-                    if color == COLOR_FRIENDLY or color == COLOR_SQUAD:
-                        count += 1
-            return count
+            if data.get('valid') is True:
+                val = data.get('IAS, km/h')
+                return int(val) if val is not None else None
+            return None
         except:
-            return -1
+            return None
 
     def update_data_loop(self):
         while self.is_running:
-            count = self.get_friend_count()
-            prefix = self.cfg.get('text_prefix', "FRIEND: ")
+            ias = self.get_ias()
+            prefix = self.cfg.get('text_prefix', "IAS: ")
             
-            if count == -1:
+            if ias is None:
                 display_text = f"{prefix}?"
             else:
-                display_text = f"{prefix}{count}"
+                display_text = f"{prefix}{ias}"
             
             try:
                 self.root.after(0, self.update_text, display_text)
             except:
                 break
-            time.sleep(self.cfg.get('update_interval', 0.3))
+            
+            rate = self.cfg.get('update_rate', 30)
+            if rate <= 0: rate = 1
+            if rate > 60: rate = 60 # Cap at 60 just in case
+            time.sleep(1.0 / rate)
 
 if __name__ == "__main__":
     root = tk.Tk()
