@@ -7,6 +7,14 @@ import json
 import os
 import sys
 
+# === 音频库 ===
+try:
+    import pygame
+    PYGAME_AVAILABLE = True
+except ImportError:
+    PYGAME_AVAILABLE = False
+    print("警告: 未检测到 pygame, 声音功能将不可用")
+
 # === 托盘图标库 ===
 import pystray
 from pystray import MenuItem as item
@@ -21,10 +29,12 @@ DEFAULT_CONFIG = {
     "warn_color": "#FF0000",     # 警告红色
     "text_prefix": "IAS: ",      # 前缀文本
     "update_rate": 30,           # 默认 30 Hz
-    "warn_percent": 95,          # 警告阈值 (70-95)
+    "warn_percent": 97,          # 警告阈值 (70-95)
     "unit": "km/h",              # km/h, kt, mph
     "show_unit": True,           # 是否显示单位
-    "smart_hide": True           # 默认开启智能隐藏 (仅在空战中显示)
+    "smart_hide": True,          # 默认开启智能隐藏 (仅在空战中显示)
+    "enable_sound": True,       # 默认关闭声音
+    "sound_volume": 35           # 音量 0-100
 }
 
 APP_NAME = "WTFriendCounter"     # 在 AppData 里创建的文件夹名
@@ -35,6 +45,7 @@ class FM_DB:
     """处理飞机气动数据加载"""
     def __init__(self):
         self.crit_speeds = {} # { "plane_type_id": float_speed_kmh }
+        self.crit_machs = {}  # { "plane_type_id": float_mach }
         self.load_db()
         
     def load_db(self):
@@ -60,12 +71,92 @@ class FM_DB:
                             self.crit_speeds[name] = crit_spd
                         except ValueError:
                             pass
+                            
+                        try:
+                            crit_mach = float(parts[7]) # CritAirSpdMach (index 7)
+                            self.crit_machs[name] = crit_mach
+                        except (ValueError, IndexError):
+                            pass
             print(f"成功加载 {len(self.crit_speeds)} 条飞机数据")
         except Exception as e:
             print(f"加载数据库出错: {e}")
 
     def get_limit(self, plane_type):
         return self.crit_speeds.get(plane_type)
+
+    def get_mach_limit(self, plane_type):
+        return self.crit_machs.get(plane_type)
+
+class SoundManager:
+    """处理声音播放，单例/单独管理"""
+    def __init__(self):
+        self.enabled = False
+        self.volume = 0.5
+        self.current_state = 0 # 0: None, 1: Warn, 2: Critical
+        
+        # 声音对象
+        self.snd_warn = None
+        self.snd_crit = None
+        
+        self.init_sound()
+        
+    def init_sound(self):
+        if not PYGAME_AVAILABLE:
+            return
+            
+        try:
+            pygame.mixer.init()
+            
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            p_warn = os.path.join(base_dir, "sounds", "beep_fast.wav")
+            p_crit = os.path.join(base_dir, "sounds", "beep_force_critical.wav")
+            
+            if os.path.exists(p_warn):
+                self.snd_warn = pygame.mixer.Sound(p_warn)
+            
+            if os.path.exists(p_crit):
+                self.snd_crit = pygame.mixer.Sound(p_crit)
+                
+            print("音频系统初始化完成")
+        except Exception as e:
+            print(f"音频初始化失败: {e}")
+
+    def update_settings(self, enabled, volume_percent):
+        self.enabled = enabled
+        self.volume = max(0.0, min(1.0, volume_percent / 100.0))
+        
+        # 如果被禁用，立即停止所有声音
+        if not self.enabled:
+            self.stop_all()
+            self.current_state = 0
+            
+        # 更新音量
+        if self.snd_warn: self.snd_warn.set_volume(self.volume)
+        if self.snd_crit: self.snd_crit.set_volume(self.volume)
+
+    def stop_all(self):
+        if self.snd_warn: self.snd_warn.stop()
+        if self.snd_crit: self.snd_crit.stop()
+
+    def update_state(self, new_state):
+        """
+        new_state: 0=Silent, 1=Warn(beep_fast), 2=Critical(beep_critical)
+        """
+        if not self.enabled or not PYGAME_AVAILABLE:
+            return
+
+        if new_state == self.current_state:
+            return # 状态未变
+            
+        # 状态改变，先停止旧的
+        self.stop_all()
+        
+        if new_state == 1:
+            if self.snd_warn: self.snd_warn.play(loops=-1)
+        elif new_state == 2:
+            if self.snd_crit: self.snd_crit.play(loops=-1)
+            
+        self.current_state = new_state
 
 class OverlayApp:
     def __init__(self, root):
@@ -75,11 +166,17 @@ class OverlayApp:
         # 加载数据库
         self.fm_db = FM_DB()
         
+        # 初始化声音管理器
+        self.sound_mgr = SoundManager()
+        
         # 1. 路径处理：使用 AppData (行业标准)
         self.config_path = self.get_config_path()
         
         # 2. 读取配置
         self.cfg = self.load_config()
+        
+        # 应用初始声音设置
+        self.sound_mgr.update_settings(self.cfg.get('enable_sound', False), self.cfg.get('sound_volume', 50))
 
         # 3. 窗口基础设置
         self.root.overrideredirect(True)
@@ -111,6 +208,11 @@ class OverlayApp:
         self.context_menu = tk.Menu(self.root, tearoff=0)
         self.context_menu.add_command(label="⚙ 设置 (Settings)", command=self.open_settings_window)
         self.context_menu.add_command(label="👁 隐藏 (Hide)", command=self.hide_window)
+        
+        # 添加声音开关到右键菜单
+        self.var_snd_menu = tk.BooleanVar(value=self.cfg.get('enable_sound', False))
+        self.context_menu.add_checkbutton(label="🔊 声音 (Sound)", variable=self.var_snd_menu, command=self.toggle_sound_from_menu)
+        
         self.context_menu.add_separator()
         self.context_menu.add_command(label="❌ 退出 (Exit)", command=self.quit_app)
 
@@ -233,7 +335,20 @@ class OverlayApp:
         self.var_smart = tk.BooleanVar(value=self.cfg.get('smart_hide', True))
         tk.Checkbutton(self.setting_win, text="智能隐藏 (仅在空战中显示数值)", variable=self.var_smart).pack(pady=0)
 
-        # 8. 按钮区
+        # 8. 声音设置
+        tk.Label(self.setting_win, text="[声音设置]").pack(pady=(5, 0))
+        snd_frame = tk.Frame(self.setting_win)
+        snd_frame.pack(**pad_opts)
+        
+        self.var_snd_enable = tk.BooleanVar(value=self.cfg.get('enable_sound', False))
+        tk.Checkbutton(snd_frame, text="启用声音", variable=self.var_snd_enable).pack(side=tk.LEFT)
+        
+        tk.Label(snd_frame, text="   音量:").pack(side=tk.LEFT)
+        self.scale_vol = tk.Scale(snd_frame, from_=0, to=100, orient=tk.HORIZONTAL, length=100)
+        self.scale_vol.set(self.cfg.get('sound_volume', 50))
+        self.scale_vol.pack(side=tk.LEFT)
+
+        # 9. 按钮区
         btn_frame = tk.Frame(self.setting_win)
         btn_frame.pack(pady=10, fill=tk.X, padx=10)
         tk.Button(btn_frame, text="恢复默认", command=self.restore_defaults, fg="red").pack(side=tk.LEFT)
@@ -283,9 +398,18 @@ class OverlayApp:
             self.var_show_unit.set(self.cfg['show_unit'])
             self.var_smart.set(self.cfg['smart_hide'])
             
+            self.var_snd_enable.set(self.cfg['enable_sound'])
+            self.scale_vol.set(self.cfg['sound_volume'])
+            
+            # 同步右键菜单
+            self.var_snd_menu.set(self.cfg['enable_sound'])
+
             # 3. 立即应用到悬浮窗 (无需点击保存)
             self.label.config(font=(FONT_NAME, self.cfg['font_size'], "bold"), fg=self.cfg['font_color'])
             self.canvas.itemconfig(self.handle, outline=self.cfg['font_color'])
+            
+            # 应用声音
+            self.sound_mgr.update_settings(self.cfg['enable_sound'], self.cfg['sound_volume'])
             
             # 4. 保存配置到文件
             self.save_config_file()
@@ -305,6 +429,9 @@ class OverlayApp:
         new_show_unit = self.var_show_unit.get()
         new_smart = self.var_smart.get()
         
+        new_snd_enable = self.var_snd_enable.get()
+        new_vol = self.scale_vol.get()
+        
         try:
             self.root.winfo_rgb(new_color)
             self.root.winfo_rgb(new_warn)
@@ -323,11 +450,20 @@ class OverlayApp:
         self.cfg['show_unit'] = new_show_unit
         self.cfg['smart_hide'] = new_smart
         
+        self.cfg['enable_sound'] = new_snd_enable
+        self.cfg['sound_volume'] = new_vol
+        
         # 应用
         self.label.config(font=(FONT_NAME, new_size, "bold"), fg=new_color)
         self.canvas.itemconfig(self.handle, outline=new_color)
         self.color_preview.config(bg=new_color)
         self.update_text(self.label.cget("text"), new_color) 
+        
+        self.sound_mgr.update_settings(new_snd_enable, new_vol)
+        
+        # 同步右键菜单状态
+        self.var_snd_menu.set(new_snd_enable)
+        
         self.save_config_file()
         return True
 
@@ -354,6 +490,8 @@ class OverlayApp:
         if 'unit' not in config: config['unit'] = "km/h"
         if 'show_unit' not in config: config['show_unit'] = True
         if 'smart_hide' not in config: config['smart_hide'] = True
+        if 'enable_sound' not in config: config['enable_sound'] = False
+        if 'sound_volume' not in config: config['sound_volume'] = 50
         
         return config
 
@@ -412,6 +550,18 @@ class OverlayApp:
             self.save_config_file()
         self.root.after(0, _reset)
 
+    def toggle_sound_from_menu(self):
+        """右键菜单切换声音"""
+        new_val = self.var_snd_menu.get()
+        self.cfg['enable_sound'] = new_val
+        self.sound_mgr.update_settings(new_val, self.cfg.get('sound_volume', 50))
+        self.save_config_file()
+        
+        # 如果设置窗口已打开，同步 UI
+        if hasattr(self, 'setting_win') and self.setting_win.winfo_exists():
+            if hasattr(self, 'var_snd_enable'):
+                self.var_snd_enable.set(new_val)
+
     # ================= 拖拽逻辑 =================
     def start_move(self, event):
         self.last_x = event.x_root
@@ -438,12 +588,13 @@ class OverlayApp:
                 self.label.config(text=text)
 
     def get_telemetry(self):
-        """获取所有必要的遥测数据: {status, army, type, ias}"""
+        """获取所有必要的遥测数据: {status, army, type, ias, mach}"""
         data = {
             'running': False,
             'army': '',
             'type': '',
-            'ias_kmh': None
+            'ias_kmh': None,
+            'mach': None
         }
         
         try:
@@ -462,7 +613,7 @@ class OverlayApp:
                         data['army'] = ind.get('army', '')
                         data['type'] = ind.get('type', '')
                 
-                # 3. Check State (IAS)
+                # 3. Check State (IAS, Mach)
                 r_state = requests.get('http://127.0.0.1:8111/state', timeout=0.05)
                 if r_state.ok:
                     state = r_state.json()
@@ -470,6 +621,10 @@ class OverlayApp:
                         val = state.get('IAS, km/h')
                         if val is not None:
                             data['ias_kmh'] = float(val)
+                            
+                        m_val = state.get('M')
+                        if m_val is not None:
+                            data['mach'] = float(m_val)
         except:
             pass
             
@@ -499,39 +654,75 @@ class OverlayApp:
             display_text = ""
             final_color = base_color
 
-            if should_show:
-                if data['ias_kmh'] is not None:
-                    # 1. 换算
-                    val_kmh = data['ias_kmh']
-                    val_disp = val_kmh
-                    suffix = " km/h"
+            # 无论是否显示(UI)，都要计算声音逻辑
+            # 前提是只要在飞机上(data valid)
+            snd_state = 0
+            
+            if data['ias_kmh'] is not None:
+                # 1. 换算
+                val_kmh = data['ias_kmh']
+                val_disp = val_kmh
+                suffix = " km/h"
+                
+                if unit_str == 'kt':
+                    val_disp = val_kmh / 1.852
+                    suffix = " kt"
+                elif unit_str == 'mph':
+                    val_disp = val_kmh / 1.60934
+                    suffix = " mph"
                     
-                    if unit_str == 'kt':
-                        val_disp = val_kmh / 1.852
-                        suffix = " kt"
-                    elif unit_str == 'mph':
-                        val_disp = val_kmh / 1.60934
-                        suffix = " mph"
-                        
-                    if not show_unit:
-                        suffix = ""
-                        
-                    display_text = f"{prefix}{int(val_disp)}{suffix}"
+                if not show_unit:
+                    suffix = ""
                     
-                    # 2. 警告判断
-                    limit_kmh = self.fm_db.get_limit(data['type'])
-                    if limit_kmh:
-                        if val_kmh >= limit_kmh * warn_percent:
-                            final_color = warn_color
-                else:
-                    # 在游戏里但在菜单/无数据时显示 ?
-                    if data['running'] and data['army'] == 'air':
-                        display_text = f"{prefix}?"
-                    else:
-                         # 理论上 smart_hide 会拦截，但如果 smart_hide=False，这里会显示 ?
-                        display_text = f"{prefix}?"
+                display_text = f"{prefix}{int(val_disp)}{suffix}"
+                
+                # 2. 警告判断
+                limit_kmh = self.fm_db.get_limit(data['type'])
+                limit_mach = self.fm_db.get_mach_limit(data['type'])
+                
+                is_warn_ui = False
+                
+                # 用户设置的警告 (Soft Limit) -> Sound State 1
+                if limit_kmh:
+                    if val_kmh >= limit_kmh * warn_percent:
+                        is_warn_ui = True
+                        snd_state = 1
+
+                # 硬性警告 (Force Limits) -> Sound State 2
+                is_crit = False
+                # 1. IAS > 99.2% of limit
+                if limit_kmh:
+                    if val_kmh >= limit_kmh * 0.992:
+                        is_crit = True
+                        
+                # 2. Mach > limit - 0.02
+                if limit_mach and data['mach'] is not None:
+                    if data['mach'] >= limit_mach - 0.02:
+                        is_crit = True
+
+                if is_crit:
+                    is_warn_ui = True
+                    snd_state = 2
+
+                if is_warn_ui:
+                    final_color = warn_color
             else:
-                display_text = "" # 隐藏
+                # 无数据
+                if data['running'] and data['army'] == 'air':
+                    display_text = f"{prefix}?"
+                else:
+                    display_text = f"{prefix}?"
+            
+            # 更新声音状态 (独立于 UI 显示)
+            # 只有在真正不在飞机上时才强制静音，或者没有数据
+            if not (data['running'] and data['army'] == 'air'):
+                 snd_state = 0
+            
+            self.sound_mgr.update_state(snd_state)
+
+            # 更新 UI
+            if not should_show:
+                display_text = "" # 隐藏文字内容，但窗口还在(透明)
             
             try:
                 self.root.after(0, self.update_text, display_text, final_color)
