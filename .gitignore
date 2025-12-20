@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+venv/
+dist/
+build/
+*.spec
+nuitka-crash-report*.xml
+icon (2).ico
+Generated Image December 19, 2025 - 8_18PM.png
+1icon.ico

@@ -151,8 +151,11 @@ class OverlayApp:
         # 恢复默认
         tk.Button(btn_frame, text="恢复默认", command=self.restore_defaults, fg="red").pack(side=tk.LEFT)
         
-        # 保存
+        # 保存并关闭
         tk.Button(btn_frame, text="保存并关闭", command=self.save_settings_from_ui, bg="#DDDDDD", width=15).pack(side=tk.RIGHT)
+
+        # 仅保存
+        tk.Button(btn_frame, text="保存", command=self.apply_settings, width=10).pack(side=tk.RIGHT, padx=5)
 
     def choose_color(self):
         current_hex = self.entry_hex.get()
@@ -198,7 +201,7 @@ class OverlayApp:
             # 5. 提示成功 (但不关闭窗口)
             messagebox.showinfo("提示", "已恢复默认设置！")
 
-    def save_settings_from_ui(self):
+    def apply_settings(self):
         new_prefix = self.entry_prefix.get()
         new_size = self.scale_size.get()
         new_interval = self.scale_interval.get()
@@ -208,7 +211,7 @@ class OverlayApp:
             self.root.winfo_rgb(new_color)
         except:
             messagebox.showerror("颜色错误", "颜色代码无效！")
-            return
+            return False
 
         self.cfg['text_prefix'] = new_prefix
         self.cfg['font_size'] = new_size
@@ -221,10 +224,13 @@ class OverlayApp:
         self.color_preview.config(bg=new_color)
         self.update_text(self.label.cget("text")) 
         self.save_config_file()
-        
-        # 只有点击右下角的“保存并关闭”才会关闭窗口
-        if hasattr(self, 'setting_win') and self.setting_win.winfo_exists():
-            self.setting_win.destroy()
+        return True
+
+    def save_settings_from_ui(self):
+        if self.apply_settings():
+            # 只有点击右下角的“保存并关闭”才会关闭窗口
+            if hasattr(self, 'setting_win') and self.setting_win.winfo_exists():
+                self.setting_win.destroy()
 
     # ================= 配置文件逻辑 =================
     def load_config(self):
