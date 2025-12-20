@@ -18,18 +18,62 @@ DEFAULT_CONFIG = {
     "y": 730,
     "font_size": 18,
     "font_color": "#00FF00",     # 默认亮绿色
+    "warn_color": "#FF0000",     # 警告红色
     "text_prefix": "IAS: ",      # 前缀文本
-    "update_rate": 30            # 默认 30 Hz
+    "update_rate": 30,           # 默认 30 Hz
+    "warn_percent": 95,          # 警告阈值 (70-95)
+    "unit": "km/h",              # km/h, kt, mph
+    "show_unit": True,           # 是否显示单位
+    "smart_hide": True           # 默认开启智能隐藏 (仅在空战中显示)
 }
 
-APP_NAME = "WTOverlay"     # 在 AppData 里创建的文件夹名
+APP_NAME = "WTFriendCounter"     # 在 AppData 里创建的文件夹名
 FONT_NAME = "Consolas" 
 # ===========================================
+
+class FM_DB:
+    """处理飞机气动数据加载"""
+    def __init__(self):
+        self.crit_speeds = {} # { "plane_type_id": float_speed_kmh }
+        self.load_db()
+        
+    def load_db(self):
+        # 尝试定位 FM/fm_data_db.csv
+        # 假设脚本在项目根目录，FM在 ./FM
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        csv_path = os.path.join(base_dir, "FM", "fm_data_db.csv")
+        
+        if not os.path.exists(csv_path):
+            print(f"警告: 找不到数据文件 {csv_path}")
+            return
+            
+        try:
+            with open(csv_path, 'r', encoding='utf-8') as f:
+                # 跳过第一行 Header
+                next(f) 
+                for line in f:
+                    parts = line.strip().split(';')
+                    if len(parts) >= 7:
+                        name = parts[0]
+                        try:
+                            crit_spd = float(parts[6]) # CritAirSpd (index 6)
+                            self.crit_speeds[name] = crit_spd
+                        except ValueError:
+                            pass
+            print(f"成功加载 {len(self.crit_speeds)} 条飞机数据")
+        except Exception as e:
+            print(f"加载数据库出错: {e}")
+
+    def get_limit(self, plane_type):
+        return self.crit_speeds.get(plane_type)
 
 class OverlayApp:
     def __init__(self, root):
         self.root = root
         self.root.title("WT Speed Monitor")
+        
+        # 加载数据库
+        self.fm_db = FM_DB()
         
         # 1. 路径处理：使用 AppData (行业标准)
         self.config_path = self.get_config_path()
@@ -107,67 +151,106 @@ class OverlayApp:
 
         self.setting_win = tk.Toplevel(self.root)
         self.setting_win.title("设置 - 战雷速度监视器")
-        self.setting_win.geometry("340x380")
+        # 移除固定大小，使用自适应 (方案 1)
+        # self.setting_win.geometry("380x550")
         self.setting_win.attributes("-topmost", True)
         
-        pad_opts = {'padx': 10, 'pady': 5}
+        # 减少间距 (方案 3)
+        pad_opts = {'padx': 10, 'pady': 2}
         
         # 1. 文本前缀
-        tk.Label(self.setting_win, text="显示前缀:").pack(**pad_opts)
-        self.entry_prefix = tk.Entry(self.setting_win, width=30)
+        row1 = tk.Frame(self.setting_win)
+        row1.pack(fill=tk.X, **pad_opts)
+        tk.Label(row1, text="显示前缀:").pack(side=tk.LEFT)
+        self.entry_prefix = tk.Entry(row1, width=15)
         self.entry_prefix.insert(0, self.cfg.get('text_prefix', "IAS: "))
-        self.entry_prefix.pack()
+        self.entry_prefix.pack(side=tk.RIGHT)
 
         # 2. 字号大小
-        tk.Label(self.setting_win, text="字体大小:").pack(**pad_opts)
-        self.scale_size = tk.Scale(self.setting_win, from_=10, to=60, orient=tk.HORIZONTAL, length=200)
+        row2 = tk.Frame(self.setting_win)
+        row2.pack(fill=tk.X, **pad_opts)
+        tk.Label(row2, text="字体大小:").pack(side=tk.LEFT)
+        self.scale_size = tk.Scale(row2, from_=10, to=60, orient=tk.HORIZONTAL, length=150)
         self.scale_size.set(self.cfg['font_size'])
-        self.scale_size.pack()
+        self.scale_size.pack(side=tk.RIGHT)
 
         # 3. 刷新频率
-        tk.Label(self.setting_win, text="刷新频率 (Hz/次每秒):").pack(**pad_opts)
-        self.scale_rate = tk.Scale(self.setting_win, from_=5, to=30, resolution=1, orient=tk.HORIZONTAL, length=200)
+        row3 = tk.Frame(self.setting_win)
+        row3.pack(fill=tk.X, **pad_opts)
+        tk.Label(row3, text="刷新频率 (Hz):").pack(side=tk.LEFT)
+        self.scale_rate = tk.Scale(row3, from_=5, to=30, resolution=1, orient=tk.HORIZONTAL, length=150)
         self.scale_rate.set(self.cfg.get('update_rate', 30))
-        self.scale_rate.pack()
+        self.scale_rate.pack(side=tk.RIGHT)
 
-        # 4. 颜色选择
-        tk.Label(self.setting_win, text="文字颜色 (Hex):").pack(**pad_opts)
+        # 4. 颜色设置 (正常 + 警告) - 合并在一行或两行紧凑显示
+        tk.Label(self.setting_win, text="[颜色设置]").pack(pady=(5, 0))
+        
         color_frame = tk.Frame(self.setting_win)
-        color_frame.pack()
+        color_frame.pack(fill=tk.X, **pad_opts)
         
-        self.color_preview = tk.Label(color_frame, text="    ", bg=self.cfg['font_color'], relief="solid", borderwidth=1)
-        self.color_preview.pack(side=tk.LEFT, padx=5)
-        
-        self.entry_hex = tk.Entry(color_frame, width=10)
+        # 正常颜色
+        f_norm = tk.Frame(color_frame)
+        f_norm.pack(side=tk.LEFT, padx=5)
+        tk.Label(f_norm, text="正常:").pack(side=tk.LEFT)
+        self.color_preview = tk.Label(f_norm, text="  ", bg=self.cfg['font_color'], relief="solid", width=3)
+        self.color_preview.pack(side=tk.LEFT, padx=2)
+        self.entry_hex = tk.Entry(f_norm, width=7)
         self.entry_hex.insert(0, self.cfg['font_color'])
-        self.entry_hex.pack(side=tk.LEFT, padx=5)
-        
-        tk.Button(color_frame, text="调色盘", command=self.choose_color).pack(side=tk.LEFT, padx=5)
+        self.entry_hex.pack(side=tk.LEFT)
+        tk.Button(f_norm, text="选", command=lambda: self.choose_color(self.entry_hex, self.color_preview), width=3).pack(side=tk.LEFT)
 
-        # 5. 按钮区
+        # 警告颜色
+        f_warn = tk.Frame(color_frame)
+        f_warn.pack(side=tk.RIGHT, padx=5)
+        tk.Label(f_warn, text="警告:").pack(side=tk.LEFT)
+        self.warn_preview = tk.Label(f_warn, text="  ", bg=self.cfg.get('warn_color', '#FF0000'), relief="solid", width=3)
+        self.warn_preview.pack(side=tk.LEFT, padx=2)
+        self.entry_warn = tk.Entry(f_warn, width=7)
+        self.entry_warn.insert(0, self.cfg.get('warn_color', '#FF0000'))
+        self.entry_warn.pack(side=tk.LEFT)
+        tk.Button(f_warn, text="选", command=lambda: self.choose_color(self.entry_warn, self.warn_preview), width=3).pack(side=tk.LEFT)
+
+        # 5. 警告阈值
+        row5 = tk.Frame(self.setting_win)
+        row5.pack(fill=tk.X, **pad_opts)
+        tk.Label(row5, text="警告阈值 (%):").pack(side=tk.LEFT)
+        self.scale_warn_pct = tk.Scale(row5, from_=70, to=100, orient=tk.HORIZONTAL, length=150)
+        self.scale_warn_pct.set(self.cfg.get('warn_percent', 90))
+        self.scale_warn_pct.pack(side=tk.RIGHT)
+
+        # 6. 单位选择
+        tk.Label(self.setting_win, text="[单位设置]").pack(pady=(5, 0))
+        unit_frame = tk.Frame(self.setting_win)
+        unit_frame.pack(**pad_opts)
+        self.var_unit = tk.StringVar(value=self.cfg.get('unit', 'km/h'))
+        for u in ['km/h', 'kt', 'mph']:
+            tk.Radiobutton(unit_frame, text=u, variable=self.var_unit, value=u).pack(side=tk.LEFT)
+            
+        self.var_show_unit = tk.BooleanVar(value=self.cfg.get('show_unit', True))
+        tk.Checkbutton(self.setting_win, text="显示单位文字", variable=self.var_show_unit).pack(pady=0)
+
+        # 7. 智能隐藏
+        self.var_smart = tk.BooleanVar(value=self.cfg.get('smart_hide', True))
+        tk.Checkbutton(self.setting_win, text="智能隐藏 (仅在空战中显示数值)", variable=self.var_smart).pack(pady=0)
+
+        # 8. 按钮区
         btn_frame = tk.Frame(self.setting_win)
-        btn_frame.pack(pady=20, fill=tk.X, padx=20)
-
-        # 恢复默认
+        btn_frame.pack(pady=10, fill=tk.X, padx=10)
         tk.Button(btn_frame, text="恢复默认", command=self.restore_defaults, fg="red").pack(side=tk.LEFT)
-        
-        # 保存并关闭
-        tk.Button(btn_frame, text="保存并关闭", command=self.save_settings_from_ui, bg="#DDDDDD", width=15).pack(side=tk.RIGHT)
+        tk.Button(btn_frame, text="保存并关闭", command=self.save_settings_from_ui, bg="#DDDDDD").pack(side=tk.RIGHT)
+        tk.Button(btn_frame, text="保存", command=self.apply_settings).pack(side=tk.RIGHT, padx=5)
 
-        # 仅保存
-        tk.Button(btn_frame, text="保存", command=self.apply_settings, width=10).pack(side=tk.RIGHT, padx=5)
-
-    def choose_color(self):
-        current_hex = self.entry_hex.get()
+    def choose_color(self, entry_widget, preview_widget):
+        current_hex = entry_widget.get()
         try:
             color = colorchooser.askcolor(title="选择颜色", color=current_hex)
         except:
             color = colorchooser.askcolor(title="选择颜色")
             
         if color[1]:
-            self.entry_hex.delete(0, tk.END)
-            self.entry_hex.insert(0, color[1])
-            self.color_preview.config(bg=color[1])
+            entry_widget.delete(0, tk.END)
+            entry_widget.insert(0, color[1])
+            preview_widget.config(bg=color[1])
 
     def restore_defaults(self):
         """恢复默认设置 (除了位置)，且不关闭窗口"""
@@ -190,6 +273,15 @@ class OverlayApp:
             self.entry_hex.delete(0, tk.END)
             self.entry_hex.insert(0, self.cfg['font_color'])
             self.color_preview.config(bg=self.cfg['font_color'])
+
+            self.entry_warn.delete(0, tk.END)
+            self.entry_warn.insert(0, self.cfg['warn_color'])
+            self.warn_preview.config(bg=self.cfg['warn_color'])
+            
+            self.scale_warn_pct.set(self.cfg['warn_percent'])
+            self.var_unit.set(self.cfg['unit'])
+            self.var_show_unit.set(self.cfg['show_unit'])
+            self.var_smart.set(self.cfg['smart_hide'])
             
             # 3. 立即应用到悬浮窗 (无需点击保存)
             self.label.config(font=(FONT_NAME, self.cfg['font_size'], "bold"), fg=self.cfg['font_color'])
@@ -206,9 +298,16 @@ class OverlayApp:
         new_size = self.scale_size.get()
         new_rate = self.scale_rate.get()
         new_color = self.entry_hex.get()
+        new_warn = self.entry_warn.get()
+        
+        new_warn_pct = self.scale_warn_pct.get()
+        new_unit = self.var_unit.get()
+        new_show_unit = self.var_show_unit.get()
+        new_smart = self.var_smart.get()
         
         try:
             self.root.winfo_rgb(new_color)
+            self.root.winfo_rgb(new_warn)
         except:
             messagebox.showerror("颜色错误", "颜色代码无效！")
             return False
@@ -216,13 +315,19 @@ class OverlayApp:
         self.cfg['text_prefix'] = new_prefix
         self.cfg['font_size'] = new_size
         self.cfg['font_color'] = new_color
+        self.cfg['warn_color'] = new_warn
         self.cfg['update_rate'] = new_rate
+        
+        self.cfg['warn_percent'] = new_warn_pct
+        self.cfg['unit'] = new_unit
+        self.cfg['show_unit'] = new_show_unit
+        self.cfg['smart_hide'] = new_smart
         
         # 应用
         self.label.config(font=(FONT_NAME, new_size, "bold"), fg=new_color)
         self.canvas.itemconfig(self.handle, outline=new_color)
         self.color_preview.config(bg=new_color)
-        self.update_text(self.label.cget("text")) 
+        self.update_text(self.label.cget("text"), new_color) 
         self.save_config_file()
         return True
 
@@ -242,9 +347,14 @@ class OverlayApp:
                     config.update(saved)
             except:
                 pass
-        # 兼容性处理：如果 update_rate 不存在，使用默认值
-        if 'update_rate' not in config:
-            config['update_rate'] = 30
+        # 兼容性处理
+        if 'update_rate' not in config: config['update_rate'] = 30
+        if 'warn_percent' not in config: config['warn_percent'] = 90
+        if 'warn_color' not in config: config['warn_color'] = "#FF0000"
+        if 'unit' not in config: config['unit'] = "km/h"
+        if 'show_unit' not in config: config['show_unit'] = True
+        if 'smart_hide' not in config: config['smart_hide'] = True
+        
         return config
 
     def save_config_file(self):
@@ -320,40 +430,117 @@ class OverlayApp:
         self.save_config_file()
 
     # ================= 数据循环 =================
-    def update_text(self, text):
+    def update_text(self, text, color=None):
         if self.root.state() == 'normal':
-            self.label.config(text=text)
+            if color:
+                self.label.config(text=text, fg=color)
+            else:
+                self.label.config(text=text)
 
-    def get_ias(self):
+    def get_telemetry(self):
+        """获取所有必要的遥测数据: {status, army, type, ias}"""
+        data = {
+            'running': False,
+            'army': '',
+            'type': '',
+            'ias_kmh': None
+        }
+        
         try:
-            # timeout 0.05s for high frequency polling
-            response = requests.get('http://127.0.0.1:8111/state', timeout=0.05)
-            data = response.json()
-            if data.get('valid') is True:
-                val = data.get('IAS, km/h')
-                return int(val) if val is not None else None
-            return None
+            # 1. Check Mission Status
+            r_mission = requests.get('http://127.0.0.1:8111/mission.json', timeout=0.05)
+            if r_mission.ok:
+                mission = r_mission.json()
+                data['running'] = (mission.get('status') == 'running')
+            
+            if data['running']:
+                # 2. Check Indicators
+                r_ind = requests.get('http://127.0.0.1:8111/indicators', timeout=0.05)
+                if r_ind.ok:
+                    ind = r_ind.json()
+                    if ind.get('valid'):
+                        data['army'] = ind.get('army', '')
+                        data['type'] = ind.get('type', '')
+                
+                # 3. Check State (IAS)
+                r_state = requests.get('http://127.0.0.1:8111/state', timeout=0.05)
+                if r_state.ok:
+                    state = r_state.json()
+                    if state.get('valid'):
+                        val = state.get('IAS, km/h')
+                        if val is not None:
+                            data['ias_kmh'] = float(val)
         except:
-            return None
+            pass
+            
+        return data
 
     def update_data_loop(self):
         while self.is_running:
-            ias = self.get_ias()
-            prefix = self.cfg.get('text_prefix', "IAS: ")
+            data = self.get_telemetry()
             
-            if ias is None:
-                display_text = f"{prefix}?"
+            # --- Config Values ---
+            prefix = self.cfg.get('text_prefix', "IAS: ")
+            unit_str = self.cfg.get('unit', 'km/h')
+            show_unit = self.cfg.get('show_unit', True)
+            smart_hide = self.cfg.get('smart_hide', True)
+            
+            base_color = self.cfg.get('font_color', '#00FF00')
+            warn_color = self.cfg.get('warn_color', '#FF0000')
+            warn_percent = self.cfg.get('warn_percent', 90) / 100.0
+            
+            # --- Visibility Logic ---
+            should_show = True
+            if smart_hide:
+                # 只在 游戏运行中 AND 在飞机上 时显示
+                if not data['running'] or data['army'] != 'air':
+                    should_show = False
+            
+            display_text = ""
+            final_color = base_color
+
+            if should_show:
+                if data['ias_kmh'] is not None:
+                    # 1. 换算
+                    val_kmh = data['ias_kmh']
+                    val_disp = val_kmh
+                    suffix = " km/h"
+                    
+                    if unit_str == 'kt':
+                        val_disp = val_kmh / 1.852
+                        suffix = " kt"
+                    elif unit_str == 'mph':
+                        val_disp = val_kmh / 1.60934
+                        suffix = " mph"
+                        
+                    if not show_unit:
+                        suffix = ""
+                        
+                    display_text = f"{prefix}{int(val_disp)}{suffix}"
+                    
+                    # 2. 警告判断
+                    limit_kmh = self.fm_db.get_limit(data['type'])
+                    if limit_kmh:
+                        if val_kmh >= limit_kmh * warn_percent:
+                            final_color = warn_color
+                else:
+                    # 在游戏里但在菜单/无数据时显示 ?
+                    if data['running'] and data['army'] == 'air':
+                        display_text = f"{prefix}?"
+                    else:
+                         # 理论上 smart_hide 会拦截，但如果 smart_hide=False，这里会显示 ?
+                        display_text = f"{prefix}?"
             else:
-                display_text = f"{prefix}{ias}"
+                display_text = "" # 隐藏
             
             try:
-                self.root.after(0, self.update_text, display_text)
+                self.root.after(0, self.update_text, display_text, final_color)
             except:
                 break
             
             rate = self.cfg.get('update_rate', 30)
             if rate <= 0: rate = 1
-            if rate > 60: rate = 60 # Cap at 60 just in case
+            if rate > 60: rate = 60 
             time.sleep(1.0 / rate)
 
 if __name__ == "__main__":
