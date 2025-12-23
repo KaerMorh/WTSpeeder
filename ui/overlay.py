@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import colorchooser, messagebox
+from tkinter import ttk
 import threading
 import time
 import os
@@ -83,175 +84,208 @@ class SettingsWindow:
             patcher(self)
         
     def setup_ui(self):
-        pad_opts = {'padx': 10, 'pady': 2}
+        # 底部按钮区 (独立于 Tab) - 先 Pack
+        btn_frame = tk.Frame(self.win)
+        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
+        tk.Button(btn_frame, text="恢复默认", command=self.restore_defaults, fg="red").pack(side=tk.LEFT)
+        tk.Button(btn_frame, text="保存并关闭", command=self.save_settings_from_ui, bg="#DDDDDD").pack(side=tk.RIGHT)
+        tk.Button(btn_frame, text="保存", command=self.apply_settings).pack(side=tk.RIGHT, padx=5)
+
+        # 使用 Notebook 分页
+        self.notebook = ttk.Notebook(self.win)
+        self.notebook.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # 1. 文本前缀
-        row1 = tk.Frame(self.win)
-        row1.pack(fill=tk.X, **pad_opts)
+        self.tab_ui = tk.Frame(self.notebook)
+        self.tab_func = tk.Frame(self.notebook)
+        self.tab_exp = tk.Frame(self.notebook)
+        
+        self.notebook.add(self.tab_ui, text="界面显示")
+        self.notebook.add(self.tab_func, text="功能设置")
+        if ExpTelemetry().is_available:
+            self.notebook.add(self.tab_exp, text="实验功能")
+            
+        self.setup_tab_ui()
+        self.setup_tab_func()
+        if ExpTelemetry().is_available:
+            self.setup_tab_exp()
+
+    def setup_tab_ui(self):
+        pad_opts = {'padx': 10, 'pady': 5}
+        
+        # --- 分组 1: 基础样式 ---
+        group_basic = tk.LabelFrame(self.tab_ui, text="基础样式", padx=5, pady=5)
+        group_basic.pack(fill=tk.X, **pad_opts)
+        
+        # 文本前缀
+        row1 = tk.Frame(group_basic)
+        row1.pack(fill=tk.X, pady=2)
         tk.Label(row1, text="显示前缀:").pack(side=tk.LEFT)
         self.entry_prefix = tk.Entry(row1, width=15)
         self.entry_prefix.insert(0, self.cfg.get('text_prefix', "IAS: "))
         self.entry_prefix.pack(side=tk.RIGHT)
-
-        # 2. 字号大小
-        row2 = tk.Frame(self.win)
-        row2.pack(fill=tk.X, **pad_opts)
         
         # 字体大小
-        f_font = tk.Frame(row2)
-        f_font.pack(side=tk.TOP, fill=tk.X)
-        tk.Label(f_font, text="字体大小:").pack(side=tk.LEFT)
-        self.scale_size = tk.Scale(f_font, from_=10, to=60, orient=tk.HORIZONTAL, length=150)
+        row2 = tk.Frame(group_basic)
+        row2.pack(fill=tk.X, pady=2)
+        tk.Label(row2, text="字体大小:").pack(side=tk.LEFT)
+        self.scale_size = tk.Scale(row2, from_=10, to=60, orient=tk.HORIZONTAL, length=150)
         self.scale_size.set(self.cfg['font_size'])
         self.scale_size.pack(side=tk.RIGHT)
-        
+
         # 圆球大小
-        f_handle = tk.Frame(row2)
-        f_handle.pack(side=tk.TOP, fill=tk.X, pady=(2,0))
-        tk.Label(f_handle, text="圆球大小:").pack(side=tk.LEFT)
-        self.scale_handle = tk.Scale(f_handle, from_=10, to=50, orient=tk.HORIZONTAL, length=150)
+        row3 = tk.Frame(group_basic)
+        row3.pack(fill=tk.X, pady=2)
+        tk.Label(row3, text="圆球大小:").pack(side=tk.LEFT)
+        self.scale_handle = tk.Scale(row3, from_=10, to=50, orient=tk.HORIZONTAL, length=150)
         self.scale_handle.set(self.cfg.get('handle_size', 20))
         self.scale_handle.pack(side=tk.RIGHT)
 
-        # 3. 刷新频率
-        row3 = tk.Frame(self.win)
-        row3.pack(fill=tk.X, **pad_opts)
-        lbl_rate = tk.Label(row3, text="刷新频率 (Hz):")
-        lbl_rate.pack(side=tk.LEFT)
-        ToolTip(lbl_rate, "推荐30HZ，过低可能导致提醒延误")
-        
-        self.scale_rate = tk.Scale(row3, from_=5, to=30, resolution=1, orient=tk.HORIZONTAL, length=150)
-        self.scale_rate.set(self.cfg.get('update_rate', 30))
-        self.scale_rate.pack(side=tk.RIGHT)
-        ToolTip(self.scale_rate, "推荐30HZ，过低可能导致提醒延误")
-
-        # 4. 颜色设置
-        tk.Label(self.win, text="[颜色设置]").pack(pady=(5, 0))
-        
-        color_frame = tk.Frame(self.win)
-        color_frame.pack(fill=tk.X, **pad_opts)
+        # --- 分组 2: 颜色设置 ---
+        group_color = tk.LabelFrame(self.tab_ui, text="颜色风格", padx=5, pady=5)
+        group_color.pack(fill=tk.X, **pad_opts)
         
         # 正常颜色
-        f_norm = tk.Frame(color_frame)
-        f_norm.pack(side=tk.LEFT, padx=5)
-        tk.Label(f_norm, text="正常:").pack(side=tk.LEFT)
-        self.color_preview = tk.Label(f_norm, text="  ", bg=self.cfg['font_color'], relief="solid", width=3)
-        self.color_preview.pack(side=tk.LEFT, padx=2)
-        self.entry_hex = tk.Entry(f_norm, width=7)
+        f_norm = tk.Frame(group_color)
+        f_norm.pack(fill=tk.X, pady=2)
+        tk.Label(f_norm, text="正常状态颜色:").pack(side=tk.LEFT)
+        
+        f_norm_r = tk.Frame(f_norm) # 右侧容器
+        f_norm_r.pack(side=tk.RIGHT)
+        
+        tk.Button(f_norm_r, text="选", command=lambda: self.choose_color(self.entry_hex, self.color_preview), width=3).pack(side=tk.RIGHT)
+        self.entry_hex = tk.Entry(f_norm_r, width=7)
         self.entry_hex.insert(0, self.cfg['font_color'])
-        self.entry_hex.pack(side=tk.LEFT)
-        tk.Button(f_norm, text="选", command=lambda: self.choose_color(self.entry_hex, self.color_preview), width=3).pack(side=tk.LEFT)
+        self.entry_hex.pack(side=tk.RIGHT, padx=2)
+        self.color_preview = tk.Label(f_norm_r, text="  ", bg=self.cfg['font_color'], relief="solid", width=3)
+        self.color_preview.pack(side=tk.RIGHT, padx=2)
 
         # 警告颜色
-        f_warn = tk.Frame(color_frame)
-        f_warn.pack(side=tk.RIGHT, padx=5)
-        tk.Label(f_warn, text="警告:").pack(side=tk.LEFT)
-        self.warn_preview = tk.Label(f_warn, text="  ", bg=self.cfg.get('warn_color', '#FF0000'), relief="solid", width=3)
-        self.warn_preview.pack(side=tk.LEFT, padx=2)
-        self.entry_warn = tk.Entry(f_warn, width=7)
+        f_warn = tk.Frame(group_color)
+        f_warn.pack(fill=tk.X, pady=2)
+        tk.Label(f_warn, text="警告状态颜色:").pack(side=tk.LEFT)
+        
+        f_warn_r = tk.Frame(f_warn)
+        f_warn_r.pack(side=tk.RIGHT)
+        
+        tk.Button(f_warn_r, text="选", command=lambda: self.choose_color(self.entry_warn, self.warn_preview), width=3).pack(side=tk.RIGHT)
+        self.entry_warn = tk.Entry(f_warn_r, width=7)
         self.entry_warn.insert(0, self.cfg.get('warn_color', '#FF0000'))
-        self.entry_warn.pack(side=tk.LEFT)
-        tk.Button(f_warn, text="选", command=lambda: self.choose_color(self.entry_warn, self.warn_preview), width=3).pack(side=tk.LEFT)
-
-        # 5. 警告阈值
-        row5 = tk.Frame(self.win)
-        row5.pack(fill=tk.X, **pad_opts)
-        lbl_warn = tk.Label(row5, text="警告阈值 (%):")
-        lbl_warn.pack(side=tk.LEFT)
-        ToolTip(lbl_warn, "推荐97 98")
+        self.entry_warn.pack(side=tk.RIGHT, padx=2)
+        self.warn_preview = tk.Label(f_warn_r, text="  ", bg=self.cfg.get('warn_color', '#FF0000'), relief="solid", width=3)
+        self.warn_preview.pack(side=tk.RIGHT, padx=2)
         
-        warn_frame = tk.Frame(row5)
-        warn_frame.pack(side=tk.RIGHT)
+        # --- 分组 3: 显示控制 ---
+        group_display = tk.LabelFrame(self.tab_ui, text="显示控制", padx=5, pady=5)
+        group_display.pack(fill=tk.X, **pad_opts)
         
-        self.entry_warn_pct = tk.Entry(warn_frame, width=5)
-        self.entry_warn_pct.insert(0, f"{self.cfg.get('warn_percent', 90):.1f}")
-        self.entry_warn_pct.pack(side=tk.RIGHT, padx=(5, 0))
-        self.entry_warn_pct.bind('<FocusOut>', self.on_warn_entry_change)
-        self.entry_warn_pct.bind('<Return>', self.on_warn_entry_change)
-        
-        self.scale_warn_pct = tk.Scale(warn_frame, from_=70, to=100, resolution=0.1, orient=tk.HORIZONTAL, length=120, showvalue=0)
-        self.scale_warn_pct.set(self.cfg.get('warn_percent', 90))
-        self.scale_warn_pct.pack(side=tk.RIGHT)
-        self.scale_warn_pct.configure(command=self.on_scale_change)
-        ToolTip(self.scale_warn_pct, "推荐97 98")
-
-        # 6. 单位选择
-        tk.Label(self.win, text="[单位设置]").pack(pady=(5, 0))
-        unit_frame = tk.Frame(self.win)
-        unit_frame.pack(**pad_opts)
+        # 单位行
+        row_unit = tk.Frame(group_display)
+        row_unit.pack(fill=tk.X, pady=2)
+        tk.Label(row_unit, text="单位:").pack(side=tk.LEFT)
         self.var_unit = tk.StringVar(value=self.cfg.get('unit', 'km/h'))
         for u in ['km/h', 'kt', 'mph']:
-            tk.Radiobutton(unit_frame, text=u, variable=self.var_unit, value=u).pack(side=tk.LEFT)
+            tk.Radiobutton(row_unit, text=u, variable=self.var_unit, value=u).pack(side=tk.LEFT, padx=2)
             
+        # 复选框们
         self.var_show_unit = tk.BooleanVar(value=self.cfg.get('show_unit', True))
-        tk.Checkbutton(self.win, text="显示单位文字", variable=self.var_show_unit).pack(pady=0)
+        tk.Checkbutton(group_display, text="显示单位文字", variable=self.var_show_unit).pack(anchor=tk.W)
 
-        # 7. 智能隐藏 & 只显示圆球
         self.var_smart = tk.BooleanVar(value=self.cfg.get('smart_hide', True))
-        chk_smart = tk.Checkbutton(self.win, text="智能隐藏 (仅在对局中显示)", variable=self.var_smart)
-        chk_smart.pack(pady=0)
+        chk_smart = tk.Checkbutton(group_display, text="智能隐藏 (仅在对局中显示)", variable=self.var_smart)
+        chk_smart.pack(anchor=tk.W)
         ToolTip(chk_smart, "开启后只在对局中显示真空速")
 
         self.var_hide_text = tk.BooleanVar(value=self.cfg.get('hide_text', False))
-        tk.Checkbutton(self.win, text="只显示圆球 (始终隐藏文字)", variable=self.var_hide_text).pack(pady=0)
+        tk.Checkbutton(group_display, text="只显示圆球 (始终隐藏文字)", variable=self.var_hide_text).pack(anchor=tk.W)
         
         self.var_show_cross = tk.BooleanVar(value=self.cfg.get('show_crosshair', False))
-        tk.Checkbutton(self.win, text="显示十字准星 (透明穿透)", variable=self.var_show_cross).pack(pady=0)
+        tk.Checkbutton(group_display, text="显示十字准星 (透明穿透)", variable=self.var_show_cross).pack(anchor=tk.W)
 
-        # 8. 声音设置
-        tk.Label(self.win, text="[声音设置]").pack(pady=(5, 0))
-        snd_frame = tk.Frame(self.win)
-        snd_frame.pack(**pad_opts)
+    def setup_tab_func(self):
+        pad_opts = {'padx': 10, 'pady': 5}
+
+        # --- 分组 1: 告警设置 ---
+        group_warn = tk.LabelFrame(self.tab_func, text="告警设置", padx=5, pady=5)
+        group_warn.pack(fill=tk.X, **pad_opts)
+        
+        row_w = tk.Frame(group_warn)
+        row_w.pack(fill=tk.X)
+        lbl_warn = tk.Label(row_w, text="警告阈值 (%):")
+        lbl_warn.pack(side=tk.LEFT)
+        ToolTip(lbl_warn, "推荐97 98")
+        
+        self.scale_warn_pct = tk.Scale(row_w, from_=70, to=100, resolution=0.1, orient=tk.HORIZONTAL, length=120, showvalue=0)
+        self.scale_warn_pct.set(self.cfg.get('warn_percent', 90))
+        self.scale_warn_pct.pack(side=tk.RIGHT, padx=5)
+        self.scale_warn_pct.configure(command=self.on_scale_change)
+        
+        self.entry_warn_pct = tk.Entry(row_w, width=5)
+        self.entry_warn_pct.insert(0, f"{self.cfg.get('warn_percent', 90):.1f}")
+        self.entry_warn_pct.pack(side=tk.RIGHT)
+        self.entry_warn_pct.bind('<FocusOut>', self.on_warn_entry_change)
+        self.entry_warn_pct.bind('<Return>', self.on_warn_entry_change)
+
+        # --- 分组 2: 声音设置 ---
+        group_snd = tk.LabelFrame(self.tab_func, text="声音提示", padx=5, pady=5)
+        group_snd.pack(fill=tk.X, **pad_opts)
         
         self.var_snd_enable = tk.BooleanVar(value=self.cfg.get('enable_sound', False))
-        tk.Checkbutton(snd_frame, text="启用声音", variable=self.var_snd_enable).pack(side=tk.LEFT)
+        tk.Checkbutton(group_snd, text="启用声音警报", variable=self.var_snd_enable).pack(anchor=tk.W)
         
-        tk.Label(snd_frame, text="   音量:").pack(side=tk.LEFT)
-        self.scale_vol = tk.Scale(snd_frame, from_=0, to=100, orient=tk.HORIZONTAL, length=100)
+        row_vol = tk.Frame(group_snd)
+        row_vol.pack(fill=tk.X, pady=5)
+        tk.Label(row_vol, text="音量大小:").pack(side=tk.LEFT)
+        self.scale_vol = tk.Scale(row_vol, from_=0, to=100, orient=tk.HORIZONTAL, length=150)
         self.scale_vol.set(self.cfg.get('sound_volume', 50))
-        self.scale_vol.pack(side=tk.LEFT)
+        self.scale_vol.pack(side=tk.RIGHT)
 
-        # 9. 实验性功能 (Experimental Features)
-        if ExpTelemetry().is_available:
-            tk.Label(self.win, text="[实验功能]").pack(pady=(5, 0))
-            exp_frame = tk.Frame(self.win)
-            exp_frame.pack(**pad_opts)
-            
-            # 实验性遥测 (Exp Telemetry)
-            self.var_exp_telemetry = tk.BooleanVar(value=self.cfg.get('exp_telemetry_enabled', False))
-            self.chk_exp_telemetry = tk.Checkbutton(exp_frame, text="实验性遥测 (Exp Telemetry)", variable=self.var_exp_telemetry, command=self.toggle_exp_inputs)
-            self.chk_exp_telemetry.pack(side=tk.LEFT)
-            self.tip_exp_telemetry = ToolTip(self.chk_exp_telemetry, "开启实验性飞行数据遥测模块")
-            
-            # 实验性输入 (Exp Input)
-            self.var_exp_input = tk.BooleanVar(value=self.cfg.get('exp_input_enabled', False))
-            self.chk_exp_input = tk.Checkbutton(exp_frame, text="实验性输入 (Exp Input)", variable=self.var_exp_input)
-            self.chk_exp_input.pack(side=tk.LEFT, padx=(10,0))
-            self.tip_exp_input = ToolTip(self.chk_exp_input, "启用实验性输入捕获测试")
-            
-            # 阈值设置
-            thresh_frame = tk.Frame(self.win)
-            thresh_frame.pack(**pad_opts)
-            
-            tk.Label(thresh_frame, text="触发阈值(%):").pack(side=tk.LEFT)
-            self.entry_trig = tk.Entry(thresh_frame, width=5)
-            self.entry_trig.insert(0, str(self.cfg.get('ab_trigger_pct', 99.7)))
-            self.entry_trig.pack(side=tk.LEFT, padx=2)
-            
-            tk.Label(thresh_frame, text="退出阈值(%):").pack(side=tk.LEFT, padx=(10,0))
-            self.entry_exit = tk.Entry(thresh_frame, width=5)
-            self.entry_exit.insert(0, str(self.cfg.get('ab_exit_pct', 95.0)))
-            self.entry_exit.pack(side=tk.LEFT, padx=2)
+        # --- 分组 3: 系统设置 ---
+        group_sys = tk.LabelFrame(self.tab_func, text="系统性能", padx=5, pady=5)
+        group_sys.pack(fill=tk.X, **pad_opts)
+        
+        row_rate = tk.Frame(group_sys)
+        row_rate.pack(fill=tk.X)
+        lbl_rate = tk.Label(row_rate, text="刷新频率 (Hz):")
+        lbl_rate.pack(side=tk.LEFT)
+        ToolTip(lbl_rate, "推荐30HZ，过低可能导致提醒延误")
+        
+        self.scale_rate = tk.Scale(row_rate, from_=5, to=60, resolution=1, orient=tk.HORIZONTAL, length=150)
+        self.scale_rate.set(self.cfg.get('update_rate', 30))
+        self.scale_rate.pack(side=tk.RIGHT)
 
-            # 初始化状态
-            self.toggle_exp_inputs()
-
-        # 10. 按钮区
-        btn_frame = tk.Frame(self.win)
-        btn_frame.pack(pady=10, fill=tk.X, padx=10)
-        tk.Button(btn_frame, text="恢复默认", command=self.restore_defaults, fg="red").pack(side=tk.LEFT)
-        tk.Button(btn_frame, text="保存并关闭", command=self.save_settings_from_ui, bg="#DDDDDD").pack(side=tk.RIGHT)
-        tk.Button(btn_frame, text="保存", command=self.apply_settings).pack(side=tk.RIGHT, padx=5)
+    def setup_tab_exp(self):
+        pad_opts = {'padx': 10, 'pady': 5}
+        
+        group_exp = tk.LabelFrame(self.tab_exp, text="实验性功能", padx=5, pady=5)
+        group_exp.pack(fill=tk.X, **pad_opts)
+        
+        # 实验性遥测
+        self.var_exp_telemetry = tk.BooleanVar(value=self.cfg.get('exp_telemetry_enabled', False))
+        self.chk_exp_telemetry = tk.Checkbutton(group_exp, text="启用实验性遥测 (Exp Telemetry)", variable=self.var_exp_telemetry, command=self.toggle_exp_inputs)
+        self.chk_exp_telemetry.pack(anchor=tk.W)
+        self.tip_exp_telemetry = ToolTip(self.chk_exp_telemetry, "开启实验性飞行数据遥测模块")
+        
+        # 实验性输入
+        self.var_exp_input = tk.BooleanVar(value=self.cfg.get('exp_input_enabled', False))
+        self.chk_exp_input = tk.Checkbutton(group_exp, text="启用实验性输入捕获 (Exp Input)", variable=self.var_exp_input)
+        self.chk_exp_input.pack(anchor=tk.W, padx=20)
+        
+        # 阈值设置
+        row_th = tk.Frame(group_exp)
+        row_th.pack(fill=tk.X, pady=5, padx=20)
+        
+        tk.Label(row_th, text="触发阈值(%):").pack(side=tk.LEFT)
+        self.entry_trig = tk.Entry(row_th, width=5)
+        self.entry_trig.insert(0, str(self.cfg.get('ab_trigger_pct', 99.7)))
+        self.entry_trig.pack(side=tk.LEFT, padx=5)
+        
+        tk.Label(row_th, text="退出阈值(%):").pack(side=tk.LEFT, padx=(10,0))
+        self.entry_exit = tk.Entry(row_th, width=5)
+        self.entry_exit.insert(0, str(self.cfg.get('ab_exit_pct', 95.0)))
+        self.entry_exit.pack(side=tk.LEFT, padx=5)
+        
+        # 初始化状态
+        self.toggle_exp_inputs()
 
     def toggle_exp_inputs(self):
         """根据实验功能开关状态，启用或禁用相关设置"""

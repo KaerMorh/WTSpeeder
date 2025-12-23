@@ -47,3 +47,4 @@ class FM_DB:
         return self.crit_machs.get(plane_type)
 
 
+
