@@ -1,10 +1,38 @@
+# --- 1. 默认忽略所有 ---
+*
+
+# --- 2. 目录白名单 (允许递归) ---
+!*/
+# 重新排除敏感/无关目录
+.cursor/
 __pycache__/
-*.pyc
 venv/
 dist/
 build/
-*.spec
-nuitka-crash-report*.xml
-icon (2).ico
-Generated Image December 19, 2025 - 8_18PM.png
-1icon.ico
+test_features/
+
+# 显式忽略所有 pycache
+**/__pycache__/
+**/*.pyc
+
+# --- 3. 文件白名单 (核心源码) ---
+!README.md
+!LICENSE
+!requirements.txt
+!.gitignore
+
+# 核心代码
+!main.py
+!config.py
+!core/**
+!ui/**
+!utils/**
+!FM/**
+!sounds/**
+
+# 构建相关 (仅保留公开 spec)
+!public.spec
+!WTOverlay_Public.spec
+
+# 资源文件 (精确指定)
+!icon.ico
