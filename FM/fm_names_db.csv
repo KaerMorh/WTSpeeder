@@ -2,8 +2,8 @@ Name;FmName;Type;English
 a-20g;a-20g;strike;A-20G-25 Havoc
 a-26b;a-26b;strike;A-26B-50
 a-26b_10;a-26b_10;strike;A-26B-10
-a-26c-45-dt;a-26c;bomber;A-26C-45DT
 a-26c;a-26c;bomber;A-26C-45 Invader
+a-26c-45-dt;a-26c;bomber;A-26C-45DT
 a-35b;a_35b;bomber;A-35B
 a2d;a2d;strike;A2D-1 Skyshark
 a5m4;a5m4;fighter;A5M4
@@ -47,6 +47,7 @@ a_7e;a_7e;strike;A-7E Corsair II
 a_7e_thailand;a_7e;strike;A-7E Corsair II (Thailand)
 a_7k;a_7k;strike;A-7K Corsair II
 ab_205a_1;ab_205a_1;helicopter;AB 205 A-1
+ah-64d;;fighter;
 ah_1f;ah_1f;helicopter;AH-1F
 ah_1f_event;ah_1f;helicopter;AH-1F
 ah_1f_iaf;ah_1f_iaf;helicopter;AH-1F Tzefa D/E (Israel)
@@ -60,6 +61,7 @@ ah_1w;ah_1w;helicopter;AH-1W
 ah_1w_china;ah_1w;helicopter;AH-1W (China)
 ah_1z;ah_1z;helicopter;AH-1Z
 ah_2_rooivalk;ah_2_rooivalk;helicopter;Rooivalk Mk1F CSH
+ah_56a;ah_56a;fighter;
 ah_60_iaf;ah_60_iaf;helicopter;AH-60 Battle Hawk (Israel)
 ah_64a;ah_64a;helicopter;AH-64A
 ah_64a_greece_usa;ah_64a;helicopter;AH-64A (GR) (USA)
@@ -70,6 +72,11 @@ ah_64d;ah_64d;helicopter;AH-64D
 ah_64d_i_saraph;ah_64d_i_saraph;helicopter;AH-64D-I Saraph
 ah_64d_japan;ah_64d_japan;helicopter;AH-64DJP (Japan)
 ah_64d_netherlands;ah_64d_netherlands;helicopter;AH-64D (Netherlands)
+ah_64e;ah_64e;fighter;
+ah_64e_britain;ah_64e;fighter;
+ah_64e_china;ah_64e;fighter;
+ah_64e_indonesia;ah_64e;fighter;
+ah_64e_netherlands;ah_64e;fighter;
 ah_6m;ah_6m;helicopter;AH-6M Littlebird
 ah_mk1;ah_mk1;helicopter;AH Mk.1 Apache
 ahs;ahs;helicopter;Attack Helicopter System
@@ -85,6 +92,7 @@ ar_2;ar_2;bomber;Ar-2
 arado-196a-3;arado-196a-3;bomber;Ar 196 A-3
 arado-196a-5;arado-196a-3;bomber;Ar 196 A-5
 arado-234;arado-234;bomber;Ar 234 B-2
+arado-234_hockey;;bomber;
 arado-234c-3;arado-234c-3;bomber;Ar 234 C-3
 ariete;ariete;fighter;Ariete
 attaker_fb1;attaker_fb1;fighter;Attacker FB 1
@@ -101,7 +109,9 @@ b-17e;b-17e;bomber;B-17E Flying Fortress
 b-17e_japan;b-17e;bomber;B-17E Flying Fortress (Japan)
 b-17e_late;b-17e_late;bomber;B-17E Flying Fortress /Late
 b-17g;b-17g;bomber;B-17G-60-VE Flying Fortress
+b-17g_china_rocaf;b-17g;bomber;
 b-17g_iaf;b-17g;bomber;B-17G Flying Fortress (Israel)
+b-17g_luftwaffe;b-17g;bomber;
 b-29;b-29;bomber;B-29A-BN Superfortress
 b-29_france_killstreak;b-29;bomber;B-29A-BN Superfortress (France)
 b-29_germany_killstreak;b-29;bomber;B-29A-BN Superfortress (Germany)
@@ -121,8 +131,12 @@ b7a2;b7a2;bomber;B7A2 Ryusei
 b7a2_homare_23;b7a2_homare_23;bomber;B7A2 (Homare 23) Ryusei
 b_10b;b_10b;bomber;B-10B
 b_18a;b_18a;bomber;B-18A
+b_18a_skeleton_turrets;b_18a;bomber;
+b_18a_test;b_18a;bomber;
 b_239_finland;b_239_finland;fighter;Brewster Model 239 (Finland)
 b_24d;b_24d;bomber;B-24D-25-CO Liberator
+b_24d_luftwaffe;b_24d;bomber;
+b_24m_china_plaaf;b_24d;bomber;
 b_25j_1;b_25j_20;bomber;B-25J-1 Mitchell
 b_25j_20;b_25j_20;bomber;B-25J-20 Mitchell
 b_25j_30;b_25j_20;bomber;B-25J-30 Mitchell
@@ -133,6 +147,7 @@ b_26b_c;b_26b_c;bomber;B-26B Marauder
 b_26c_france;b_26b_c;bomber;B-26C Marauder (France)
 b_34;b_34;bomber;B-34
 b_48_firecrest;b_48_firecrest;strike;Firecrest
+b_66b;b_66b;bomber;
 ba_65_k14_l;ba_65_k14_l;strike;Ba.65 (K.14) L
 bb-1;bb-1;strike;BB-1
 be_6;be_6;bomber;Be-6
@@ -173,6 +188,7 @@ bf-110c-6;bf-110c-6;strike;Bf 110 C-6
 bf-110f-2;bf-110f-2;strike;Bf 110 F-2
 bf-110g-2;bf-110g-2;strike;Bf 110 G-2
 bf2c_1;bf2c_1;fighter;BF2C-1 Goshawk
+bf_109t_2;bf_109t_2;fighter;
 bf_110g_4;bf-110g-4;strike;Bf 110 G-4
 bf_110g_4_hungary;bf-110g-4;strike;Bf 110 G-4 (Hungary)
 bi;bi;fighter;BI
@@ -208,6 +224,7 @@ canberra_bimk6_sweden_killstreak;canberra_bmk2;bomber;Canberra B Mk 6 (Sweden)
 canberra_bimk6_usa_killstreak;canberra_bmk2;bomber;Canberra B Mk 6 (USA)
 canberra_bmk2;canberra_bmk2;bomber;Canberra B Mk 2
 caudron_cr714;caudron_cr714;fighter;C.R.714
+cf_188a_canada;fa_18a;fighter;
 corsair_fmk2;corsair_fmk2;fighter;Corsair F Mk II
 cr_32;cr_32;fighter;CR.32
 cr_32_bis;cr_32_bis;fighter;CR.32 bis
@@ -227,10 +244,13 @@ d_510c;d_510;fighter;D.510C
 d_520;d_520;fighter;D.520
 d_520_france;d_520_france;fighter;D.520 (France)
 d_521;d_521;fighter;D.521
+db_3a;db_3a;bomber;
 db_3a_china;db_3a;bomber;DB-3A (China)
 db_3b;db_3b;bomber;DB-3B
 db_7;db_7;bomber;DB-7
+db_lk;db_lk;bomber;
 dh_110_sea_vixen;dh_110;fighter;DH.110 Sea Vixen F.A.W. Mk.2
+dji_mavic_2;dji_mavic_2;fighter;
 do_17e_1;do_17e_1;bomber;Do 17 E-1
 do_17z_2;do_17z_2;bomber;Do 17 Z-2
 do_17z_7;do_17z_7;bomber;Do 17 Z-7
@@ -250,11 +270,15 @@ douglas_ad_2;douglas_ad_2;strike;AD-2 Skyraider
 douglas_ad_4;douglas_ad_4;strike;AD-4 Skyraider
 douglas_ad_4_france;douglas_ad_4_france;strike;AD-4 Skyraider (France)
 douglas_ad_4na_france;douglas_ad_4na_france;strike;AD-4NA Skyraider (France)
+dummy_plane;;fighter;
 e7k2;e7k2;bomber;E7K2
 e8n2;e8n2;bomber;E8N2
+ef_2000_aesa;ef_2000_aesa;fighter;
 ef_2000_block_10;ef_2000_block_10;fighter;EF-2000 Typhoon (Block 10 T2) (Germany)
 ef_2000_fgr4;typhoon_fgr4;fighter;EF-2000 Typhoon FGR.4
+ef_2000_typhoon_aesa;ef_2000_typhoon_aesa;fighter;
 ef_2000a;f_2000a;fighter;F-2000A Typhoon
+ef_2000a_aesa;ef_2000a_aesa;fighter;
 er-2_ach30b_early;er-2_ach30b_early;bomber;Yer-2 (ACh-30B) Early
 er-2_ach30b_late;er-2_ach30b_early;bomber;Yer-2 (ACh-30B) Late
 er-2_m105_mv3;er-2_m105_mv3;bomber;Yer-2 (M-105)
@@ -302,6 +326,7 @@ f-5e_aidc;f_5e_aidc;fighter;AIDC F-5E (China)
 f-5e_fcu_thailand;f_5e_fcu_thailand;fighter;F-5E FCU (Thailand)
 f-5e_switzerland;f-5e_switzerland;fighter;F-5E Tiger II (Germany)
 f-5t_thailand;f_5t_thailand;fighter;F-5T Tigris SCU (Thailand)
+f-5th_thailand;f_5t_thailand;fighter;
 f-80;f-80;fighter;F-80C-10 Shooting Star
 f-80a;f-80a;fighter;F-80A-5 Shooting Star
 f-82e;f-82e;fighter;F-82E Twin Mustang
@@ -312,8 +337,8 @@ f-84f_germany;f-84f;strike;F-84F Thunderstreak (Germany)
 f-84f_iaf;f-84f;strike;F-84F Thunderstreak (Israel)
 f-84f_israel_iaf;f-84f;strike;F-84F Thunderstreak (Israel)
 f-84f_italy;f-84f;strike;F-84F Thunderstreak (Italy)
-f-84g-31-re_china;f-84g;strike;F-84G-31-RE Thunderjet (China)
 f-84g;f-84g;strike;F-84G-21-RE Thunderjet
+f-84g-31-re_china;f-84g;strike;F-84G-31-RE Thunderjet (China)
 f-84g_china;f-84g;strike;F-84G-21-RE Thunderjet (China)
 f-84g_france;f-84g_france;strike;F-84G-26-RE Thunderjet (France)
 f-84g_italy;f-84g;strike;F-84G-21-RE Thunderjet (Italy)
@@ -334,6 +359,8 @@ f-86k_late;f-86k;fighter;F-86K Sabre
 f-86k_late_german;f-86k;fighter;F-86K Sabre (Germany)
 f-86k_late_italy;f-86k;fighter;F-86K Sabre (Italy)
 f-89b;f-89b;fighter;F-89B
+f-89c_30mm;f-89b;fighter;
+f-89c_rocket;f-89b;fighter;
 f-89d;f-89d;fighter;F-89D
 f-8e;f-8e;fighter;F-8E Crusader
 f-8e_fn;f-8e_fn;fighter;F-8E(FN) Crusader II
@@ -377,9 +404,13 @@ f9f-2;f9f-2;fighter;F9F-2 Panther
 f9f-5;f9f-5;fighter;F9F-5 Panther
 f9f-8;f9f-8;fighter;F9F-8 Cougar
 f_100f_china;f_100f;fighter;F-100F Super Sabre (China)
+f_106a_1972;f_106a_1972;fighter;
 f_111a;f_111a;strike;F-111A Aardvark
 f_111c_raaf;f_111c;strike;F-111C Aardvark
 f_111f;f_111f;strike;F-111F Aardvark
+f_111f_iaf_killstreak;f_111f;fighter;
+f_111f_japan_killstreak;f_111f;fighter;
+f_111f_killstreak;f_111f;fighter;
 f_117;f_117;strike;F-117
 f_14a_early;f_14a_early;fighter;F-14A Tomcat (Early)
 f_14a_iriaf;f_14a_iriaf;fighter;F-14A Tomcat (Early) IRIAF
@@ -387,6 +418,7 @@ f_14b;f_14b;fighter;F-14B Tomcat
 f_15a;f_15a;fighter;F-15A Eagle
 f_15a_iaf;f_15a;fighter;F-15A Baz (Israel)
 f_15c_baz_msip;f_15c_baz_msip;fighter;F-15C Baz (Improved) Meshupar
+f_15c_golden_eagle;f_15c_golden_eagle;fighter;
 f_15c_msip2;f_15c_msip2;fighter;F-15C MSIP II Eagle
 f_15e;f_15e;strike;F-15E Strike Eagle
 f_15i_raam;f_15i_raam;strike;F-15I Ra’am
@@ -398,15 +430,18 @@ f_16a_block_10_netz_mod;f_16a_block_10;fighter;F-16A Block 10 Netz (Mod)
 f_16a_block_15_adf;f_16a_block_15_adf;fighter;F-16A Block 15 ADF Fighting Falcon
 f_16a_block_15_adf_italy;f_16a_block_15_adf_italy;fighter;F-16A Block 15 ADF Fighting Falcon (Italy)
 f_16a_block_15_belgium;f_16a_block_15_belgium;fighter;F-16A Block 15 Fighting Falcon (Belgium)
+f_16a_block_15_ocu_belgium;f_16a_block_15_ocu_belgium;fighter;
 f_16a_block_15_ocu_thailand;f_16a_block_15_ocu_thailand;fighter;F-16A Block 15 OCU Fighting Falcon (Thailand)
 f_16a_block_20_mlu;f_16a_block_20_mlu;fighter;F-16A Block 20 MLU Fighting Falcon (China)
 f_16aj;f_16aj;fighter;F-16AJ Fighting Falcon
 f_16am_block_15_mlu_belgium;f_16am_block_15_mlu_belgium;fighter;F-16AM Block 15 MLU Fighting Falcon (Belgium)
+f_16am_block_20_mlu_norway;f_16a_block_20_mlu;fighter;
 f_16c_block_40_barak_2;f_16c_block_40_barak_2;fighter;F-16C Block 40 Barak II
 f_16c_block_50;f_16c_block_50;fighter;F-16C Block 50 Fighting Falcon
 f_16c_block_50_missile_test;f_16c_block_50;fighter;F-16C Block 50 Fighting Falcon (Missile Test)
 f_16d_block_40_barak_2;f_16d_block_40_barak_2;fighter;F-16D Block 40 Barak II
 f_16d_block_40_barak_2_missile_test;f_16d_block_40_barak_2;fighter;F-16D Block 40 Barak II (Missile Test)
+f_16i_sufa;f_16i_sufa;fighter;
 f_20a;f_20a;fighter;F-20A Tigershark
 f_222_2;f_222_2;bomber;F.222.2
 f_2a;f_2a;fighter;F-2A
@@ -414,12 +449,16 @@ f_2a_adtw;f_2a_adtw;fighter;F-2A ADTW
 f_47n_25_re_china;f_47n_25_re_china;fighter;F-47N-25-RE Thunderbolt (China)
 f_4e_event;f-4e;fighter;F-4E Phantom II
 fa_18a;fa_18a;fighter;F/A-18A Hornet
+fa_18a_hug_2_raaf;fa_18a_hug_2_raaf;fighter;
+fa_18a_raaf;fa_18a;fighter;
 fa_18c_early;fa_18c_early;fighter;F/A-18C (Early) Hornet
 fa_18c_finland;fa_18c_finland;fighter;F-18C Hornet (Finland)
 fa_18c_late;fa_18c_late;fighter;F/A-18C (Late) Hornet
 fa_18c_late_switzerland;fa_18c_late_switzerland;fighter;F/A-18C (Late) Hornet (Germany)
 fa_18c_mlu_2_finland;fa_18c_mlu_2_finland;fighter;F/A-18C MLU 2 Hornet (Finland)
 fa_18c_switzerland;fa_18c_late_switzerland;fighter;F/A-18C Hornet (Germany)
+fa_18d_late_malaysia;fa_18d_late_malaysia;fighter;
+fa_18e_block_2;fa_18e_block_2;fighter;
 fairey_3f_mk3b;fairey_3f_mk3b;bomber;Fairey IIIF Mk.IIIB
 fau-1;fau-1;fighter;V-1
 fc_20_bis;fc_20_bis;strike;F.C.20 Bis
@@ -451,8 +490,10 @@ fj_4b_agm_12b;fj_4b;strike;FJ-4B VMF-232 Fury
 fokker_d21_mod20;fokker_d21_mod20;fighter;Fokker D.XXI
 fokker_d21_netherlands;fokker_d21_netherlands;fighter;Fokker D.XXI (Dutch)
 fokker_d21_serie3_finland;fokker_d21_serie3_finland;fighter;Fokker D.XXI Series 3 (Finland)
+fokker_d23;fokker_d23;fighter;
 fokker_d7;fokker_d7;fighter;Fokker D.VII
 fokker_g1a;fokker_g1a;strike;Fokker G.I Mercury (Dutch)
+fr_1_fireball;fr_1_fireball;fighter;
 fury_mk1;fury_mk1;fighter;Fury Mk I
 fury_mk2;fury_mk2;fighter;Fury Mk II
 fw-189a-1;fw_189a_1;bomber;Fw 189 A-1
@@ -512,12 +553,14 @@ h-75a-5;p-36a;fighter;Hawk H-75A-5
 h-75a-6;p-36a;fighter;Hawk H-75A-6
 h-75a-7;p-36a;fighter;Hawk H-75A-7
 h-75m;p-36a;fighter;Hawk H-75M
+h-75m_china;h_75m_china;fighter;
 h-75n;p-36a;fighter;Hawk H-75N
 h6k4;h6k4;bomber;H6K4
 h8k2;h8k2;bomber;H8K2
 h8k3;h8k3;bomber;H8K3
 h_34;h_34;helicopter;H-34
 h_34_france;h_34_france;helicopter;H-34 (France)
+h_81a_2;;fighter;
 halifax_mk3;halifax_mk3;bomber;Halifax B Mk IIIa
 harrier_frs1;harrier_frs1;strike;Sea Harrier FRS.1
 harrier_frs1_early;harrier_frs1;strike;Sea Harrier FRS.1 Early
@@ -525,6 +568,9 @@ harrier_gr1;harrier_gr1;strike;Harrier GR.1
 harrier_gr3;harrier_gr3;strike;Harrier GR.3
 harrier_gr7;harrier_gr7;strike;Harrier GR.7
 harrier_t10;harrier_t10;strike;Harrier T.10
+hawk_200;hawk_200;fighter;
+hawk_200_rda;hawk_200_rda;fighter;
+hawk_209_indonesia;hawk_209_indonesia;fighter;
 hawk_iii;hawk_iii;fighter;Hawk III
 he-111h-16_winter;he-111h-16_winter;bomber;He 111 H-16
 he-111h-2;he-111h-2;bomber;He 111 H-3
@@ -566,12 +612,14 @@ hs-129b-2_romania;hs-129b-2;strike;Hs 129 B-2 (Romanian Air Force)
 hs-129b-2_romania_italy;hs-129b-2;strike;Hs 129 B-2 (Romanian Air Force) (Italy)
 hs-129b-3;hs-129b-3;strike;Hs 129 B-3
 hudson_mk_v;hudson_mk_v;bomber;Hudson Mk V
+hudson_mk_v_gear_test;hudson_mk_v;bomber;
 hunter_f1;hunter_f1;fighter;Hunter F.1
 hunter_f50_sweden;hunter_f4_mk50;fighter;J34
 hunter_f58_switzerland;hunter_f58a;fighter;Hunter F.58 (Germany)
 hunter_f58a_1971_switzerland;hunter_f58a;fighter;Hunter F.58A (1971) (Germany)
 hunter_f6;hunter_f6;fighter;Hunter F.6
 hunter_f6_holland;hunter_f6_holland;fighter;Hunter F.6 (Netherlands)
+hunter_f9;hunter_f9;fighter;
 hunter_f9_rhodesia;hunter_f9;fighter;Hunter FGA.9
 hurricane_mk1;hurricane_mk1;fighter;Hurricane Mk I Late
 hurricane_mk1_late;hurricane_mk1;fighter;Hurricane Mk I Late
@@ -595,6 +643,7 @@ i-15bis_krasnolutsky;i-15bis_krasnolutsky;fighter;Krasnolutsky's I-15bis
 i-16_chung_28;i-16_chung_28;fighter;I-16 Chung 28 (China)
 i-16_type10;i-16_type10;fighter;I-16 type 10 Ishak
 i-16_type10_china;i-16_type10;fighter;I-16 type 10 (China)
+i-16_type17;i-16_type17;fighter;
 i-16_type17_china;i-16_type17;fighter;I-16 type 17 (China)
 i-16_type18;i-16_type18;fighter;I-16 type 18 Ishak
 i-16_type24;i-16_type24;fighter;I-16 type 24 Ishak
@@ -607,6 +656,7 @@ i_180_event01;i_180_event01;fighter;I-180S (defective)
 i_180_event02;i_180_event02;fighter;I-180S (defective)
 i_180_event03;i_180_event03;fighter;I-180S (defective)
 i_180_event04;i_180_event04;fighter;I-180S (defective)
+i_185_m71;i_185_m82;fighter;
 i_185_m71_standard;i_185_m71_standard;fighter;I-185 (M-71)
 i_185_m82;i_185_m82;fighter;I-185 (M-82)
 i_225;i-225;fighter;I-225
@@ -630,6 +680,7 @@ il_28_hungary;il_28;bomber;IL-28 (Hungary)
 il_28_killstreak;il_28;bomber;IL-28 (il_28_killstreak)
 il_28sh;il_28sh;bomber;IL-28Sh
 il_2_1941;il_2_1941;strike;IL-2 (1941)
+il_2_1942;il_2_1941;fighter;
 il_2_1942_luftwaffe;il-2i;strike;IL-2 (1942) (Germany)
 il_2_37_1943;il_2_37_1943;strike;IL-2-37
 il_2_m82;il_2_m82;strike;IL-2 M-82
@@ -650,6 +701,7 @@ j7w1;j7w1;fighter;J7W1 Shinden
 j8m1;j8m1;fighter;Ki-200 Shusui
 j9_early;j9_early;fighter;J9 Early
 j_10a;j_10a;fighter;J-10A (Early)
+j_10c;j_10c;fighter;
 j_11;j_11;fighter;J-11
 j_11a;j_11a;fighter;J-11A
 j_11b;j_11b;fighter;J-11B
@@ -674,7 +726,9 @@ jaguar_gr1a;jaguar_gr1a;strike;Jaguar GR.1A
 jaguar_is;jaguar_is;strike;Jaguar IS
 javelin_fmk9;javelin_fmk9;fighter;Javelin F.(A.W.) Mk.9
 jf_17;jf_17;strike;JF-17 Thunder
+jh_7;jh_7;fighter;
 jh_7a;jh_7a;strike;JH-7A Flying Leopard II
+jh_7a_prototype;jh_7a;fighter;
 ju-188a-2;ju-188a-2;bomber;Ju 188 A-2
 ju-288c;ju-288c;bomber;Ju 288 C
 ju-388j;ju-388j;bomber;Ju 388 J
@@ -757,6 +811,7 @@ ki_87;ki_87;fighter;Ki-87
 ki_94_2;ki_94_2;fighter;Ki-94-II
 kitsuka;kitsuka;fighter;Kikka
 kor_1;kor_1;bomber;KOR-1
+kor_2;;bomber;
 l_39za;l_39za;strike;L-39ZA Albatros (USSR)
 la-11;la-11;fighter;La-11
 la-11_china;la-11;fighter;La-11 (China)
@@ -766,6 +821,7 @@ la-5_type39;la-5f_type_39;fighter;La-5F
 la-5fn;la-5fn;fighter;La-5FN
 la-5fn_luftwaffe;la-5fn;fighter;La-5FN (Germany)
 la-7;la-7;fighter;La-7
+la-7_3_china_plaaf;la-7;fighter;
 la-7_dolgushin;la-7;fighter;Dolgushin's La-7
 la-7b-20;la-7b-20;fighter;La-7B-20
 la-9;la-9;fighter;La-9
@@ -782,6 +838,7 @@ lagg-3-4;lagg-3-4;fighter;LaGG-3-4
 lagg-3-66;lagg-3-66;fighter;LaGG-3-66
 lagg-3-8;lagg-3-8;fighter;LaGG-3-8
 lagg-i-301;lagg-i-301;fighter;I-301
+lagg_gu-37;;fighter;
 lancaster_mk1;lancaster_mk1;bomber;Lancaster B Mk I
 lancaster_mk3;lancaster_mk3;bomber;Lancaster B Mk III
 lancaster_mr7_france;lancaster_mr7_france;bomber;Lancaster MR.7 (France)
@@ -789,13 +846,16 @@ late_298d;late_298d;bomber;Late 298D
 leo_451_early;leo_451_early;bomber;LeO 451 early
 leo_451_late;leo_451_late;bomber;LeO 451 late
 li-2;li-2;bomber;Li-2
+li_2_1938;li-2_1938;bomber;
 lightning_f53;lightning_f6;fighter;Lightning F.53
 lightning_f6;lightning_f6;fighter;Lightning F.6
+lincoln_b1;lincoln_b2;bomber;
 lincoln_b2;lincoln_b2;bomber;Lincoln B Mk II
 loire_130;loire_130;bomber;Loire 130С
 lynx_ah_mk1;lynx_ah_mk1;helicopter;Lynx AH.Mk.1
 martin_139wc;martin_139wc;bomber;Martin 139WC
 marut_mk1;marut_mk1;strike;HF-24 Marut
+maryland_mk1;maryland_mk1;bomber;
 maryland_mk1_france;maryland_mk1;bomber;Martin 167-A3 (France)
 mb_151c1;mb_151c1;fighter;M.B.151C.1
 mb_152c1;mb_152c1;fighter;M.B.152C1
@@ -803,6 +863,8 @@ mb_157;mb_157;fighter;M.B.157
 mb_162;mb_162;bomber;M.B.162
 mb_174_a3;mb_174_a3;bomber;M.B.174A-3
 mb_175t;mb_175t;bomber;M.B.175T
+mb_326b;mb_326b;fighter;
+mb_326k;mb_326k;fighter;
 mb_5;mb_5;fighter;MB.5
 mbr-2;mbr-2;bomber;MBR-2-M-34
 mc-202;mc-202;fighter;C. 202 Folgore (Germany)
@@ -819,6 +881,7 @@ mc200_serie7_italy;mc200_serie7;fighter;C. 200 Saetta serie 7 (Italy)
 md_450b_barougan;md_450b_barougan;fighter;M.D.450B Barougan
 md_450b_ouragan;md_450b_ouragan;fighter;M.D.450B Ouragan
 md_450b_ouragan_iaf;md_450b_ouragan;fighter;M.D.450B Ouragan (Israel)
+md_450b_ouragan_iaf_29;md_450b_ouragan;fighter;
 md_452_mystere_2a;md_452_mystere_2a;fighter;M.D.452 Mystere IIA
 md_452_mystere_2c_preproduction;md_452_mystere_2c_preproduction;fighter;M.D.452 Mystere IIC pre-production
 md_454_mystere_4a;md_454_mystere_4a;fighter;M.D.454 Mystere IVA
@@ -829,11 +892,12 @@ md_460_sambad;md_460_sambad;fighter;Super Mystere B2 Sambad
 md_460_usa;md_460;fighter;Super Mystere B2 (USA)
 md_460_yt_cup_2019;md_460;fighter;Super Mystere B2 (France)
 md_500_tow_late;md_500_tow_late;helicopter;MD500-TOW Lahatut
-me-163b-0;me-163b-0;fighter;Me 163 B-0
 me-163b;me-163b;fighter;Me 163 B
+me-163b-0;me-163b-0;fighter;Me 163 B-0
 me-262a-1a;me-262a-1a;fighter;Me 262 A-1a Schwalbe
 me-262a-1a_early;me-262a-1a_early;strike;Me 262 A-1a/Jabo
 me-262a-1a_u4;me-262a-1a_u4;strike;Me 262 A-1/U4 Pulkzerstörer
+me-262a-1b;;fighter;
 me-262a-2a;me-262a-2a;strike;Me 262 A-2a Sturmvogel
 me-262a1_u1;me-262a_1_u1;strike;Me 262 A-1a/U1
 me-262c-1a;me-262c-1a;fighter;Me 262 C-1a Heimatschützer I
@@ -857,6 +921,7 @@ meteor_fmk8_reaper;meteor_fmk8_reaper;fighter;Meteor F Mk.8 Reaper
 meteor_frmk9_iaf;meteor_frmk9_iaf;fighter;Meteor FR Mk.9 (Israel)
 meteor_nfmk13;meteor_nfmk13;fighter;Meteor NF Mk.13 (Israel)
 mh_60l_dap;mh_60l_dap;helicopter;MH-60L DAP Black Hawk
+mi-35;;fighter;
 mi_24a;mi_24a;helicopter;Mi-24A
 mi_24d;mi_24v;helicopter;Mi-24D (USSR)
 mi_24d_hungary;mi_24v;helicopter;Mi-24D (Hungary)
@@ -871,6 +936,8 @@ mi_28n;mi_28n;helicopter;Mi-28N
 mi_28nm;mi_28nm;helicopter;Mi-28NM
 mi_35m;mi_35m;helicopter;Mi-35M
 mi_35m_pakistan;mi_35m;helicopter;Mi-35M
+mi_35p;mi_35p;fighter;
+mi_35p_indonesia;mi_35p;fighter;
 mi_4av;mi_4av;helicopter;Mi-4AV
 mi_8amtsh;mi_8amtsh;helicopter;Mi-8AMTSh
 mi_8amtsh_vn;mi_8amtsh_vn;helicopter;Mi-8AMTSh-VN
@@ -918,6 +985,7 @@ mig_23mf_hungary;mig_23mf;fighter;MiG-23MF (Hungary)
 mig_23ml;mig_23ml;fighter;MiG-23ML
 mig_23mla;mig_23mla;fighter;MiG-23MLA (Germany)
 mig_23mld;mig_23mld;fighter;MiG-23MLD
+mig_25pd;mig_25pd;fighter;
 mig_27k;mig_27k;fighter;MiG-27K
 mig_27m;mig_27m;fighter;MiG-27M
 mig_29_9_12_germany;mig_29_9_12_germany;fighter;MiG-29 (9-12A) (Germany)
@@ -925,6 +993,7 @@ mig_29_9_12_sniper;mig_29_9_12_germany;fighter;MiG-29 Sniper
 mig_29_9_12b_hungary;mig_29_9_12_germany;fighter;MiG-29 (9-12B) (Hungary)
 mig_29_9_12g;mig_29_9_12g;fighter;MiG-29 (9-12G) (Germany)
 mig_29_9_13;mig_29_9_13;fighter;MiG-29 (9-13)
+mig_29n;mig_29_9_12g;fighter;
 mig_29smt_9_19;mig_29smt_9_19;fighter;MiG-29SMT (9-19)
 mig_29smt_9_19_missile_test;mig_29smt_9_19;fighter;MiG-29SMT (9-19) (Missile Test)
 mig_3_series_1_15;mig_3_series_1_15;fighter;MiG-3-15
@@ -1007,8 +1076,8 @@ p-40f-5_france_ep;p-40f;fighter;P-40F-5 Lafayette (France)
 p-40f_10;p-40f;fighter;P-40F-10 Warhawk
 p-43a-1;p_43a_1;fighter;P-43A-1
 p-43a-1_china;p_43a_1;fighter;P-43A-1 (China)
-p-47d-28;p-47d-28;fighter;P-47D-28 Thunderbolt
 p-47d;p-47d;fighter;P-47D-25 Thunderbolt
+p-47d-28;p-47d-28;fighter;P-47D-28 Thunderbolt
 p-47d_16_re_germany;p-47d_16_re;fighter;P-47D-16-RE Thunderbolt (Germany)
 p-47d_22_re;p-47d_22_re;fighter;P-47D-22-RE Thunderbolt
 p-47d_22_re_france;p-47d_22_re;fighter;P-47D-22-RE Thunderbolt (France)
@@ -1071,7 +1140,7 @@ pby-5a;pby-5a;bomber;PBY-5A Catalina
 pby-5a_late_france;pby-5a_late_france;bomber;PBY-5A Catalina (Late) (France)
 pby-5a_raf;pby-5a;bomber;Catalina Mk IIIa
 pby-5a_ussr;pby-5a;bomber;PBY-5A Catalina (USSR)
-pe-2-1;pe-2-1;bomber;Pe-2-1 Peshka 
+pe-2-1;pe-2-1;bomber;Pe-2-1 Peshka
 pe-2-110;pe-2-110;bomber;Pe-2-110 Peshka
 pe-2-205;pe-2-205;bomber;Pe-2-205 Peshka
 pe-2-31;pe-2-31;bomber;Pe-2-31 Peshka

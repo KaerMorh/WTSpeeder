@@ -40,3 +40,13 @@ test_features/
 # --- 4. 最终强制忽略 (防止白名单重新包含) ---
 **/__pycache__/
 **/*.pyc
+FM/backups/fm_data_db_20251229_105443.csv
+FM/backups/fm_data_db_20251229_105722.csv
+FM/backups/fm_data_db_20251229_113919.csv
+FM/backups/fm_data_db_20251229_142726.csv
+FM/backups/fm_data_db_20251229_153044.csv
+FM/backups/fm_names_db_20251229_105443.csv
+FM/backups/fm_names_db_20251229_105722.csv
+FM/backups/fm_names_db_20251229_113919.csv
+FM/backups/fm_names_db_20251229_142726.csv
+FM/backups/fm_names_db_20251229_153044.csv

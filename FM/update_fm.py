@@ -276,8 +276,11 @@ class BlkxParser:
         else:
             result["fm_name"] = ""
         
-        # type
+        # type - 可能是字符串或列表
         raw_type = data.get("type", "")
+        # 如果是列表，取第一个元素
+        if isinstance(raw_type, list):
+            raw_type = raw_type[0] if raw_type else ""
         result["type"] = TYPE_MAP.get(raw_type, "fighter")
         
         # 英文名称 - 尝试从 wiki 获取
@@ -744,9 +747,11 @@ def check_and_update_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
     for fm_name, diffs, new_record in changes:
         print(f"\n【{fm_name}】")
         for col, old_val, new_val in diffs:
-            # 截断过长的值
-            old_display = old_val[:30] + "..." if len(old_val) > 30 else old_val
-            new_display = new_val[:30] + "..." if len(new_val) > 30 else new_val
+            # 转换为字符串并截断过长的值
+            old_str = str(old_val)
+            new_str = str(new_val)
+            old_display = old_str[:30] + "..." if len(old_str) > 30 else old_str
+            new_display = new_str[:30] + "..." if len(new_str) > 30 else new_str
             print(f"  {col}: {old_display} -> {new_display}")
         
         choice = input("  更新这个 FM? (y/N/a=全部更新/q=退出): ").strip().lower()
