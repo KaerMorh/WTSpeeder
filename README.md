@@ -1,6 +1,6 @@
-# WT Speed Monitor (War Thunder Airspeed Assistant)
+# WTSpeeder (War Thunder Airspeed Assistant)
 
-**WT Speed Monitor** 是一款专为《战争雷霆》（War Thunder）空战玩家设计的辅助工具。它通过悬浮窗实时显示指示空速（IAS），并根据当前驾驶机型的气动结构极限，提供智能的**超速警告**，有效防止在俯冲或高速平飞时因超速导致机翼断裂。
+**WTSpeeder** 是一款专为《战争雷霆》（War Thunder）空战玩家设计的辅助工具。它通过悬浮窗实时显示指示空速（IAS），并根据当前驾驶机型的气动结构极限，提供智能的**超速警告**，有效防止在俯冲或高速平飞时因超速导致机翼断裂。
 
 > **注意**：本项目致力于提供无侵入、专注于飞行安全的速度监控体验。
 
