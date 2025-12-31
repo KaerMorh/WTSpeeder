@@ -5,10 +5,9 @@ FM Database Update Tool
 从 GitHub War Thunder Datamine 仓库更新本地飞行模型数据库
 
 使用方法:
-    python FM/update_fm.py --add-missing    # 添加缺失的飞机FM和名称映射
-    python FM/update_fm.py --check-updates  # 检查并更新已有飞机的FM数据
-    python FM/update_fm.py --sync-names     # 仅同步名称映射(不含FM)
-    python FM/update_fm.py --all            # 执行全部操作
+    python update_fm.py --add-missing    # 添加缺失的飞机FM和名称映射
+    python update_fm.py --check-updates  # 检查并更新已有飞机的FM数据
+    python update_fm.py --all            # 执行全部操作
 
 环境变量:
     GITHUB_TOKEN    # 设置 GitHub Token 以避免 API 限流
@@ -20,14 +19,18 @@ import json
 import argparse
 import shutil
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, Set
 
-# 确保可以导入 requests
+# 确保可以导入依赖库
 try:
     import requests
-except ImportError:
-    print("错误: 需要安装 requests 库")
-    print("运行: pip install requests")
+    from dotenv import load_dotenv
+    from tqdm import tqdm
+    # 加载环境变量
+    load_dotenv()
+except ImportError as e:
+    print(f"错误: 缺少必要的依赖库 - {e}")
+    print("请运行: pip install requests python-dotenv tqdm")
     sys.exit(1)
 
 
@@ -37,6 +40,7 @@ except ImportError:
 
 GITHUB_API_BASE = "https://api.github.com/repos/gszabi99/War-Thunder-Datamine/contents"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/gszabi99/War-Thunder-Datamine/master"
+GITHUB_TREE_API = "https://api.github.com/repos/gszabi99/War-Thunder-Datamine/git/trees/master"
 FM_PATH = "aces.vromfs.bin_u/gamedata/flightmodels"
 
 # 本地文件路径 (相对于脚本所在目录)
@@ -283,11 +287,7 @@ class BlkxParser:
             raw_type = raw_type[0] if raw_type else ""
         result["type"] = TYPE_MAP.get(raw_type, "fighter")
         
-        # 英文名称 - 尝试从 wiki 获取
-        wiki = data.get("wiki", {})
-        general = wiki.get("general", {}) if wiki else {}
-        # 实际上 wiki 里没有英文名，需要从其他地方获取
-        # 暂时使用空值，后续可以从 lang 文件获取
+        # 英文名称 - 暂时使用空值
         result["english"] = ""
         
         return result
@@ -304,8 +304,11 @@ class GitHubFetcher:
         self.session = requests.Session()
         self.session.headers.update({
             "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "WTFriendCounter-FM-Updater"
+            "User-Agent": "WTFM-Updater"
         })
+        
+        # 缓存仓库文件树
+        self._tree_cache = None
         
         # 支持 GitHub Token 以避免 API 限流
         github_token = os.environ.get("GITHUB_TOKEN")
@@ -313,96 +316,100 @@ class GitHubFetcher:
             self.session.headers["Authorization"] = f"token {github_token}"
             print("已配置 GitHub Token")
     
+    def _get_repo_tree(self) -> List[Dict]:
+        """获取并缓存仓库文件树"""
+        if self._tree_cache is not None:
+            return self._tree_cache
+        
+        tree_url = f"{GITHUB_TREE_API}?recursive=1"
+        
+        try:
+            print("  正在获取仓库文件树 (首次获取可能需要较长时间)...")
+            resp = self.session.get(tree_url, timeout=120)
+            if resp.status_code == 403:
+                print("  警告: GitHub API 限流，请稍后重试或配置 GITHUB_TOKEN 环境变量")
+                return []
+            resp.raise_for_status()
+            
+            data = resp.json()
+            self._tree_cache = data.get("tree", [])
+            print(f"  文件树获取完成，共 {len(self._tree_cache)} 个条目")
+            return self._tree_cache
+            
+        except requests.RequestException as e:
+            print(f"  获取文件树失败: {e}")
+            return []
+    
     def get_fm_file_list(self) -> List[str]:
         """
         获取 flightmodels/fm 目录下所有 FM 文件名
+        使用 Git Trees API 一次性获取完整目录树（避免分页问题）
         
         Returns:
             FM 名称列表 (不含扩展名)
         """
-        url = f"{GITHUB_API_BASE}/{FM_PATH}/fm"
         print(f"正在获取 FM 文件列表...")
         
+        tree = self._get_repo_tree()
+        if not tree:
+            return []
+        
         fm_names = []
-        page = 1
-        max_pages = 50  # 安全限制
+        fm_prefix = f"{FM_PATH}/fm/"
         
-        while page <= max_pages:
-            try:
-                resp = self.session.get(url, params={"per_page": 100, "page": page}, timeout=30)
-                if resp.status_code == 403:
-                    print("  警告: GitHub API 限流，请稍后重试或配置 GITHUB_TOKEN 环境变量")
-                    return fm_names  # 返回已获取的部分
-                if resp.status_code == 404:
-                    print("  错误: 目录不存在")
-                    return []
-                resp.raise_for_status()
-                
-                files = resp.json()
-                if not files or not isinstance(files, list):
-                    break
-                
-                for f in files:
-                    name = f.get("name", "")
-                    if name.endswith(".blkx"):
-                        # 去掉 .blkx 后缀
-                        fm_name = name[:-5]
-                        fm_names.append(fm_name)
-                
-                # 检查是否还有更多页
-                if len(files) < 100:
-                    break
-                page += 1
-                
-            except requests.RequestException as e:
-                print(f"  获取文件列表失败: {e}")
-                break
+        for item in tree:
+            path = item.get("path", "")
+            if path.startswith(fm_prefix) and path.endswith(".blkx"):
+                # 提取文件名并去掉 .blkx 后缀
+                filename = path[len(fm_prefix):]
+                fm_name = filename[:-5]  # 去掉 .blkx
+                fm_names.append(fm_name)
         
-        print(f"  找到 {len(fm_names)} 个 FM 文件")
+        print(f"  总共找到 {len(fm_names)} 个 FM 文件")
         return fm_names
     
     def get_unit_file_list(self) -> List[str]:
         """
         获取 flightmodels 目录下所有单位文件名
+        使用 Git Trees API 一次性获取完整目录树（避免分页问题）
         
         Returns:
             单位名称列表 (不含扩展名)
         """
-        url = f"{GITHUB_API_BASE}/{FM_PATH}"
         print(f"正在获取单位文件列表...")
         
+        tree = self._get_repo_tree()
+        if not tree:
+            return []
+        
         unit_names = []
-        page = 1
+        unit_prefix = f"{FM_PATH}/"
+        fm_subdir = f"{FM_PATH}/fm/"
         
-        while True:
-            try:
-                resp = self.session.get(url, params={"per_page": 100, "page": page}, timeout=30)
-                if resp.status_code == 403:
-                    print("  警告: GitHub API 限流")
-                    break
-                resp.raise_for_status()
+        for item in tree:
+            path = item.get("path", "")
+            item_type = item.get("type", "")
+            
+            # 只要 flightmodels 目录下的直接文件（不包括子目录如 fm/）
+            if item_type != "blob":
+                continue
+            if not path.startswith(unit_prefix):
+                continue
+            if path.startswith(fm_subdir):
+                continue  # 跳过 fm/ 子目录下的文件
+            if not path.endswith(".blkx"):
+                continue
+            
+            # 提取文件名
+            filename = path[len(unit_prefix):]
+            # 跳过子目录中的文件
+            if "/" in filename:
+                continue
                 
-                files = resp.json()
-                if not files:
-                    break
-                
-                for f in files:
-                    if f.get("type") != "file":
-                        continue
-                    name = f.get("name", "")
-                    if name.endswith(".blkx") and not name.startswith("fm_"):
-                        unit_name = name[:-5]
-                        unit_names.append(unit_name)
-                
-                if len(files) < 100:
-                    break
-                page += 1
-                
-            except requests.RequestException as e:
-                print(f"  获取文件列表失败: {e}")
-                break
+            unit_name = filename[:-5]  # 去掉 .blkx
+            unit_names.append(unit_name)
         
-        print(f"  找到 {len(unit_names)} 个单位文件")
+        print(f"  总共找到 {len(unit_names)} 个单位文件")
         return unit_names
     
     def download_fm_file(self, fm_name: str) -> Optional[str]:
@@ -514,11 +521,11 @@ class FMDatabase:
                 f.write(';'.join(values) + '\n')
         print(f"已保存 {len(self.names_records)} 条名称映射")
     
-    def get_existing_fm_names(self) -> set:
+    def get_existing_fm_names(self) -> Set[str]:
         """获取已存在的 FM 名称集合"""
         return set(self.data_records.keys())
     
-    def get_existing_unit_names(self) -> set:
+    def get_existing_unit_names(self) -> Set[str]:
         """获取已存在的单位名称集合"""
         return set(self.names_records.keys())
     
@@ -583,7 +590,7 @@ class FMDatabase:
 
 
 # ============================================================================
-# 主要功能函数
+# 功能1: 添加缺失的飞机
 # ============================================================================
 
 def add_missing_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
@@ -643,9 +650,7 @@ def add_missing_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
     fm_added = 0
     if missing_fm:
         print(f"\n正在添加 {len(missing_fm)} 个 FM...")
-        for i, fm_name in enumerate(sorted(missing_fm), 1):
-            print(f"\r[{i}/{len(missing_fm)}] FM: {fm_name}".ljust(60), end="")
-            
+        for fm_name in tqdm(sorted(missing_fm), desc="添加FM数据"):
             content = fetcher.download_fm_file(fm_name)
             if not content:
                 continue
@@ -656,15 +661,12 @@ def add_missing_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
             
             db.add_data_record(record)
             fm_added += 1
-        print()
     
     # 下载并解析缺失的单位名称映射
     units_added = 0
     if missing_units:
         print(f"\n正在添加 {len(missing_units)} 个单位映射...")
-        for i, unit_name in enumerate(sorted(missing_units), 1):
-            print(f"\r[{i}/{len(missing_units)}] 单位: {unit_name}".ljust(60), end="")
-            
+        for unit_name in tqdm(sorted(missing_units), desc="添加名称映射"):
             content = fetcher.download_unit_file(unit_name)
             if not content:
                 continue
@@ -684,7 +686,6 @@ def add_missing_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
                 info.get("english", unit_name)
             )
             units_added += 1
-        print()
     
     # 保存
     if fm_added > 0:
@@ -694,6 +695,10 @@ def add_missing_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
     
     print(f"\n完成! 添加了 {fm_added} 个 FM, {units_added} 个单位映射")
 
+
+# ============================================================================
+# 功能2: 检查并更新已有飞机
+# ============================================================================
 
 def check_and_update_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
     """功能2: 检查并更新已有飞机"""
@@ -716,11 +721,10 @@ def check_and_update_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
     # 备份
     db.backup()
     
-    changes = []  # [(fm_name, diffs), ...]
+    changes = []  # [(fm_name, diffs, new_record), ...]
     
-    for i, fm_name in enumerate(local_fm_names, 1):
-        print(f"\r[{i}/{len(local_fm_names)}] 检查: {fm_name}".ljust(60), end="")
-        
+    print("\n正在检查更新...")
+    for fm_name in tqdm(local_fm_names, desc="检查FM数据"):
         content = fetcher.download_fm_file(fm_name)
         if not content:
             continue
@@ -735,7 +739,7 @@ def check_and_update_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
         if diffs:
             changes.append((fm_name, diffs, new_record))
     
-    print("\n")
+    print()
     
     if not changes:
         print("没有发现任何更改")
@@ -744,8 +748,10 @@ def check_and_update_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
     print(f"发现 {len(changes)} 个 FM 有更改:\n")
     
     updated_count = 0
-    for fm_name, diffs, new_record in changes:
-        print(f"\n【{fm_name}】")
+    update_all = False
+    
+    for i, (fm_name, diffs, new_record) in enumerate(changes):
+        print(f"\n【{fm_name}】({i+1}/{len(changes)})")
         for col, old_val, new_val in diffs:
             # 转换为字符串并截断过长的值
             old_str = str(old_val)
@@ -754,19 +760,20 @@ def check_and_update_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
             new_display = new_str[:30] + "..." if len(new_str) > 30 else new_str
             print(f"  {col}: {old_display} -> {new_display}")
         
-        choice = input("  更新这个 FM? (y/N/a=全部更新/q=退出): ").strip().lower()
+        if update_all:
+            db.add_data_record(new_record)
+            updated_count += 1
+            continue
+        
+        choice = input("  更新? (y=是/n=否/a=全部更新/q=退出): ").strip().lower()
         
         if choice == 'q':
             print("已退出")
             break
         elif choice == 'a':
-            # 更新当前及所有后续
+            update_all = True
             db.add_data_record(new_record)
             updated_count += 1
-            for fm2, diffs2, rec2 in changes[changes.index((fm_name, diffs, new_record))+1:]:
-                db.add_data_record(rec2)
-                updated_count += 1
-            break
         elif choice == 'y':
             db.add_data_record(new_record)
             updated_count += 1
@@ -776,58 +783,6 @@ def check_and_update_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
         print(f"\n完成! 更新了 {updated_count} 个 FM")
     else:
         print("\n没有进行任何更新")
-
-
-def sync_names_database(db: FMDatabase, fetcher: GitHubFetcher):
-    """同步名称数据库 (单位 -> FM 映射)"""
-    print("\n" + "="*60)
-    print("同步名称数据库")
-    print("="*60)
-    
-    # 获取远程单位列表
-    remote_units = set(fetcher.get_unit_file_list())
-    local_units = db.get_existing_unit_names()
-    
-    missing_units = remote_units - local_units
-    print(f"本地: {len(local_units)}, 远程: {len(remote_units)}, 缺失: {len(missing_units)}")
-    
-    if not missing_units:
-        print("名称数据库已是最新")
-        return
-    
-    confirm = input(f"是否添加 {len(missing_units)} 个缺失的单位映射? (y/N): ").strip().lower()
-    if confirm != 'y':
-        print("已取消")
-        return
-    
-    added = 0
-    for i, unit_name in enumerate(sorted(missing_units), 1):
-        print(f"\r[{i}/{len(missing_units)}] 处理: {unit_name}".ljust(60), end="")
-        
-        content = fetcher.download_unit_file(unit_name)
-        if not content:
-            continue
-        
-        info = BlkxParser.extract_unit_info(content)
-        if not info:
-            continue
-        
-        # 跳过直升机
-        if info.get("type") == "helicopter":
-            continue
-        
-        db.add_names_record(
-            unit_name,
-            info.get("fm_name", unit_name),
-            info.get("type", "fighter"),
-            info.get("english", unit_name)
-        )
-        added += 1
-    
-    print("\n")
-    if added > 0:
-        db.save_names()
-        print(f"添加了 {added} 个单位映射")
 
 
 # ============================================================================
@@ -840,10 +795,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-  python FM/update_fm.py --add-missing     # 添加缺失的飞机
-  python FM/update_fm.py --check-updates   # 检查并更新已有飞机
-  python FM/update_fm.py --sync-names      # 同步名称数据库
-  python FM/update_fm.py --all             # 执行全部操作
+  python update_fm.py --add-missing     # 添加缺失的飞机
+  python update_fm.py --check-updates   # 检查并更新已有飞机
+  python update_fm.py --all             # 执行全部操作
         """
     )
     
@@ -851,15 +805,13 @@ def main():
                         help="添加缺失的飞机FM和名称映射")
     parser.add_argument("--check-updates", action="store_true",
                         help="检查并更新已有飞机的FM数据")
-    parser.add_argument("--sync-names", action="store_true",
-                        help="仅同步名称映射数据库(不含FM)")
     parser.add_argument("--all", action="store_true",
                         help="执行全部操作")
     
     args = parser.parse_args()
     
     # 如果没有任何参数，显示帮助
-    if not any([args.add_missing, args.check_updates, args.sync_names, args.all]):
+    if not any([args.add_missing, args.check_updates, args.all]):
         parser.print_help()
         return
     
@@ -875,9 +827,6 @@ def main():
     
     if args.all or args.check_updates:
         check_and_update_aircraft(db, fetcher)
-    
-    if args.all or args.sync_names:
-        sync_names_database(db, fetcher)
     
     print("\n全部操作完成!")
 
