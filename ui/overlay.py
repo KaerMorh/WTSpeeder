@@ -859,8 +859,9 @@ class OverlayApp:
                     
                 display_text = f"{prefix}{int(val_disp)}{suffix}"
                 
-                limit_kmh = self.fm_db.get_limit(data['type'])
-                limit_mach = self.fm_db.get_mach_limit(data['type'])
+                wing_sweep = data.get('wing_sweep')
+                limit_kmh = self.fm_db.get_limit(data['type'], wing_sweep)
+                limit_mach = self.fm_db.get_mach_limit(data['type'], wing_sweep)
                 
                 is_warn_ui = False
                 
@@ -897,8 +898,9 @@ class OverlayApp:
             ab_result = None # Store result for logging
 
             if data['running'] and data['army'] == 'air':
-                limit_kmh = self.fm_db.get_limit(data['type'])
-                limit_mach = self.fm_db.get_mach_limit(data['type'])
+                wing_sweep = data.get('wing_sweep')
+                limit_kmh = self.fm_db.get_limit(data['type'], wing_sweep)
+                limit_mach = self.fm_db.get_mach_limit(data['type'], wing_sweep)
                 
                 if data['ias_kmh'] is not None:
                     ab_result = self.exp_mgr.update(

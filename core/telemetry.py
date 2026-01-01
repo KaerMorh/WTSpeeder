@@ -12,7 +12,8 @@ def get_telemetry():
         'mach': None,
         'airbrake': None,
         'throttle_in': None,  # 输入
-        'throttle_out': None  # 输出
+        'throttle_out': None,  # 输出
+        'wing_sweep': None  # 可变后掠翼位置 (0.0=展开, 1.0=后掠)
     }
     
     try:
@@ -35,6 +36,11 @@ def get_telemetry():
                     t_val = ind.get('throttle')
                     if t_val is not None:
                         data['throttle_in'] = float(t_val)
+                    
+                    # 可变后掠翼位置 (0.0=展开, 1.0=完全后掠)
+                    sweep_val = ind.get('wing_sweep_indicator')
+                    if sweep_val is not None:
+                        data['wing_sweep'] = float(sweep_val)
             
             # 3. Check State (IAS, Mach, Airbrake)
             r_state = requests.get('http://127.0.0.1:8111/state', timeout=0.05)
