@@ -7,6 +7,9 @@ class FM_DB:
         # 存储格式: float (普通飞机) 或 list[(sweep, value), ...] (可变后掠翼)
         self.crit_speeds = {}
         self.crit_machs = {}
+        # 名称映射: 游戏返回的 type -> FM 数据库中的 name
+        self.name_to_fm = {}
+        self.load_names_db()
         self.load_db()
     
     @staticmethod
@@ -75,6 +78,28 @@ class FM_DB:
         
         # 不应该到达这里，但作为安全回退
         return data_points[-1][1]
+    
+    def load_names_db(self):
+        """加载 fm_names_db.csv，建立游戏名称 -> FM名称的映射"""
+        csv_path = resource_path(os.path.join("FM", "fm_names_db.csv"))
+        
+        if not os.path.exists(csv_path):
+            print(f"警告: 找不到名称映射文件 {csv_path}")
+            return
+        
+        try:
+            with open(csv_path, 'r', encoding='utf-8') as f:
+                next(f)  # 跳过 Header: Name;FmName;Type;English
+                for line in f:
+                    parts = line.strip().split(';')
+                    if len(parts) >= 2:
+                        game_name = parts[0].strip()  # 游戏返回的 type
+                        fm_name = parts[1].strip()    # FM 数据库中的 name
+                        if game_name and fm_name:
+                            self.name_to_fm[game_name] = fm_name
+            print(f"成功加载 {len(self.name_to_fm)} 条名称映射")
+        except Exception as e:
+            print(f"加载名称映射出错: {e}")
         
     def load_db(self):
         csv_path = resource_path(os.path.join("FM", "fm_data_db.csv"))
@@ -111,6 +136,30 @@ class FM_DB:
         except Exception as e:
             print(f"加载数据库出错: {e}")
 
+    def _resolve_name(self, plane_type):
+        """
+        解析飞机名称，尝试多种方式匹配数据库
+        
+        Args:
+            plane_type: 游戏返回的飞机类型
+            
+        Returns:
+            在 crit_speeds 中找到的有效名称，或 None
+        """
+        if not plane_type:
+            return None
+        
+        # 1. 直接用原始名称查找
+        if plane_type in self.crit_speeds:
+            return plane_type
+        
+        # 2. 尝试通过 fm_names_db 映射查找
+        fm_name = self.name_to_fm.get(plane_type)
+        if fm_name and fm_name in self.crit_speeds:
+            return fm_name
+        
+        return None
+
     def get_limit(self, plane_type, wing_sweep=None):
         """
         获取速度限制 (km/h)
@@ -122,7 +171,10 @@ class FM_DB:
         Returns:
             速度限制值，未找到时返回 None
         """
-        limit = self.crit_speeds.get(plane_type)
+        resolved = self._resolve_name(plane_type)
+        if resolved is None:
+            return None
+        limit = self.crit_speeds.get(resolved)
         if limit is None:
             return None
         if isinstance(limit, list):
@@ -140,7 +192,10 @@ class FM_DB:
         Returns:
             马赫数限制值，未找到时返回 None
         """
-        limit = self.crit_machs.get(plane_type)
+        resolved = self._resolve_name(plane_type)
+        if resolved is None:
+            return None
+        limit = self.crit_machs.get(resolved)
         if limit is None:
             return None
         if isinstance(limit, list):
