@@ -9,6 +9,7 @@ __pycache__/
 venv/
 dist/
 build/
+.venv/
 test_features/
 
 # 显式忽略所有 pycache
@@ -50,3 +51,4 @@ FM/backups/fm_names_db_20251229_105722.csv
 FM/backups/fm_names_db_20251229_113919.csv
 FM/backups/fm_names_db_20251229_142726.csv
 FM/backups/fm_names_db_20251229_153044.csv
+
