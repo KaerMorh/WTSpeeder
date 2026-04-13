@@ -150,6 +150,7 @@ b_26b_c;b_26b_c;bomber;B-26B Marauder
 b_26c_france;b_26b_c;bomber;B-26C Marauder (France)
 b_34;b_34;bomber;B-34
 b_48_firecrest;b_48_firecrest;strike;Firecrest
+b_52h;nt_b_52h;bomber;
 b_66b;b_66b;bomber;
 ba_65_a80;ba_65_a80;fighter;
 ba_65_k14_l;ba_65_k14_l;strike;Ba.65 (K.14) L
@@ -455,6 +456,7 @@ f_2a;f_2a;fighter;F-2A
 f_2a_adtw;f_2a_adtw;fighter;F-2A ADTW
 f_47n_25_re_china;f_47n_25_re_china;fighter;F-47N-25-RE Thunderbolt (China)
 f_4e_event;f-4e;fighter;F-4E Phantom II
+f_6c_pakistan;f_6c_pakistan;fighter;
 fa_18a;fa_18a;fighter;F/A-18A Hornet
 fa_18a_hug_2_raaf;fa_18a_hug_2_raaf;fighter;
 fa_18a_raaf;fa_18a;fighter;
@@ -1061,6 +1063,15 @@ nf_5a_netherlands;nf_5a_netherlands;fighter;NF-5A Freedom Fighter (Netherlands)
 night_fighter_mk_2;boston_mk_1;bomber;
 nimrod_mk1;nimrod_mk1;fighter;Nimrod Mk I
 nimrod_mk2;nimrod_mk2;fighter;Nimrod Mk II
+nt_a_10a_early;a-10a_early;fighter;
+nt_a_6e_tram;a_6e_tram;fighter;
+nt_a_7e;a_7e;bomber;
+nt_b_52h;nt_b_52h;bomber;
+nt_f_4e;f-4e;fighter;
+nt_mig_23mld;mig_23mld;fighter;
+nt_su_24m;su_24m;fighter;
+nt_su_25t;su_25t;fighter;
+nt_tu_95m;nt_tu_95m;bomber;
 o3u_1;o3u_1;bomber;OS3U-1 Corsair
 oh_58d;oh_58d;helicopter;OH-58D Kiowa Warrior
 oh_58d_china;oh_58d;helicopter;OH-58D Kiowa Warrior (China)
@@ -1461,6 +1472,7 @@ tu_4;tu_4;bomber;Tu-4
 tu_4_china;tu_4;bomber;Tu-4 (China)
 tu_4_china_killstreak;tu_4;bomber;Tu-4 (China)
 tu_4_killstreak;tu_4;bomber;Tu-4 (tu_4_killstreak)
+tu_95m;nt_tu_95m;bomber;
 typhoon_mk1a;typhoon_mk1a;fighter;Typhoon Mk Ia
 typhoon_mk1b;typhoon_mk1b;fighter;Typhoon Mk Ib
 typhoon_mk1b_late;typhoon_mk1b_late;fighter;Typhoon Mk Ib /Late
