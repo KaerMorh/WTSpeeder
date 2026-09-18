@@ -102,13 +102,13 @@ class FMVersionTests(unittest.TestCase):
     def test_application_update_uses_static_manifest(self):
         release = {
             "schema_version": 1,
-            "tag_name": "v0.3.2",
+            "tag_name": "v0.3.3",
             "published_at": "2026-09-18T12:00:00Z",
             "body": "测试更新说明",
             "assets": [
                 {
                     "name": name,
-                    "browser_download_url": f"https://github.com/KaerMorh/WTSpeeder/releases/download/v0.3.2/{name}",
+                    "browser_download_url": f"https://github.com/KaerMorh/WTSpeeder/releases/download/v0.3.3/{name}",
                 }
                 for name in ("WTOverlay_Public.exe", "SHA256SUMS.txt")
             ],

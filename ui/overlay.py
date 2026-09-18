@@ -11,7 +11,7 @@ from pystray import MenuItem as item
 from PIL import Image, ImageDraw
 
 from config import (
-    APP_NAME, FONT_NAME, DEFAULT_CONFIG, 
+    APP_NAME, FONT_NAME, DEFAULT_CONFIG,
     resource_path, load_config, save_config
 )
 from core.telemetry import get_telemetry
@@ -22,6 +22,23 @@ from utils.logger import CSVLogger
 from app_version import APP_VERSION, PUBLIC_RELEASES_URL
 from core.app_update import check_release, download_release, install_on_exit, is_public_build
 from core.fm_versions import FMVersionManager, SCHEMA_VERSION
+
+SPEED_UNITS = {
+    'kt': (1.852, " kt"),
+    'mph': (1.60934, " mph"),
+}
+
+UI_FONT_FAMILY = "Microsoft YaHei UI"
+SETTINGS_FONT = (UI_FONT_FAMILY, 9, "normal")
+SETTINGS_SECTION_FONT = (UI_FONT_FAMILY, 9, "bold")
+MENU_FONT = (UI_FONT_FAMILY, 10, "normal")
+
+
+def convert_speed(kmh, unit):
+    """把接口返回的 km/h 原值换算成设置的单位，返回 (数值, 单位后缀)。"""
+    divisor, suffix = SPEED_UNITS.get(unit, (1.0, " km/h"))
+    return kmh / divisor, suffix
+
 
 class ToolTip:
     """简单的工具提示控件"""
@@ -78,8 +95,16 @@ class SettingsWindow:
         self.app = app
         self.win = tk.Toplevel(app.root)
         self.win.title("设置 - 战雷速度监视器")
-        self.win.attributes("-topmost", True)
+        # 不做永久置顶：需要时由 raise_settings_window() 临时置顶再恢复
         self.cfg = app.cfg # Reference to app config
+
+        # 明确指定支持中文的正常字重字体，避免 Tk 默认字体回退后出现粗黑、粘连。
+        self.win.option_add("*Font", SETTINGS_FONT)
+        self.win.option_add("*Labelframe.font", SETTINGS_SECTION_FONT)
+        self.win.option_add("*TCombobox*Listbox.font", SETTINGS_FONT)
+        style = ttk.Style(self.win)
+        style.configure(".", font=SETTINGS_FONT)
+        style.configure("TNotebook.Tab", font=SETTINGS_FONT)
         
         self.setup_ui()
         
@@ -95,6 +120,14 @@ class SettingsWindow:
         tk.Button(btn_frame, text="恢复默认", command=self.restore_defaults, fg="red").pack(side=tk.LEFT)
         tk.Button(btn_frame, text="保存并关闭", command=self.save_settings_from_ui, bg="#DDDDDD").pack(side=tk.RIGHT)
         tk.Button(btn_frame, text="保存", command=self.apply_settings).pack(side=tk.RIGHT, padx=5)
+
+        # 遥测接口状态 (固定在按钮区上方，切 Tab 也能看到)
+        status_frame = tk.Frame(self.win)
+        status_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10)
+        self.conn_status = tk.StringVar(value="正在检测遥测接口……")
+        self.conn_label = tk.Label(status_frame, textvariable=self.conn_status, anchor="w", justify=tk.LEFT)
+        self.conn_label.pack(fill=tk.X)
+        self.poll_conn_status()
 
         # 使用 Notebook 分页
         self.notebook = ttk.Notebook(self.win)
@@ -116,6 +149,54 @@ class SettingsWindow:
         self.setup_tab_update()
         if ExpTelemetry().is_available:
             self.setup_tab_exp()
+
+    def poll_conn_status(self):
+        if not self.win.winfo_exists():
+            return
+        self.update_conn_status()
+        self.win.after(500, self.poll_conn_status)
+
+    def update_conn_status(self):
+        data = getattr(self.app, 'last_data', None)
+        color = "#666666"
+        if data is None:
+            text = "正在检测遥测接口……"
+        elif not data.get('api_ok'):
+            text = "未连接 127.0.0.1:8111 —— 游戏未运行，或游戏内未开启 8111 端口"
+            color = "#CC0000"
+        elif not data.get('running'):
+            text = "已连接 8111，但当前不在对局中（车库 / 大厅）"
+            color = "#CC8800"
+        elif data.get('army') != 'air':
+            text = "已连接 8111，当前非空战（army=%s）" % (data.get('army') or '未知')
+            color = "#CC8800"
+        else:
+            unit = self.cfg.get('unit', 'km/h')
+            speed = self._format_speed(data.get('ias_kmh'), unit, "IAS", "无数据")
+            limit = self._lookup_limit(data)
+            limit_missing = "FM未收录该机型" if getattr(self.app, 'fm_db', None) else "未知"
+            limit_text = self._format_speed(limit, unit, "限制", limit_missing)
+            text = "已连接 8111 · 空战 · %s%s%s" % (data.get('type') or '未知机型', speed, limit_text)
+            color = "#118800"
+            if self.cfg.get('text_mode', 'ingame') == 'never':
+                text += "　[文字已隐藏：文字显示＝一直隐藏]"
+                color = "#CC8800"
+        self.conn_status.set(text)
+        self.conn_label.config(fg=color)
+
+    def _lookup_limit(self, data):
+        fm_db = getattr(self.app, 'fm_db', None)
+        plane_type = data.get('type')
+        if fm_db is None or not plane_type:
+            return None
+        return fm_db.get_limit(plane_type, data.get('wing_sweep'))
+
+    @staticmethod
+    def _format_speed(kmh, unit, label, fallback):
+        if kmh is None:
+            return "　%s %s" % (label, fallback)
+        value, suffix = convert_speed(kmh, unit)
+        return "　%s %d%s" % (label, int(value), suffix)
 
     def setup_tab_update(self):
         self.fm_manager = FMVersionManager()
@@ -387,15 +468,27 @@ class SettingsWindow:
             
         # 复选框们
         self.var_show_unit = tk.BooleanVar(value=self.cfg.get('show_unit', True))
-        tk.Checkbutton(group_display, text="显示单位文字", variable=self.var_show_unit).pack(anchor=tk.W)
+        chk_show_unit = tk.Checkbutton(group_display, text="显示单位文字", variable=self.var_show_unit)
+        chk_show_unit.pack(anchor=tk.W)
+        ToolTip(chk_show_unit, "速度后面的单位文字（km/h、kt、mph）")
 
-        self.var_smart = tk.BooleanVar(value=self.cfg.get('smart_hide', True))
-        chk_smart = tk.Checkbutton(group_display, text="智能隐藏 (仅在对局中显示)", variable=self.var_smart)
-        chk_smart.pack(anchor=tk.W)
-        ToolTip(chk_smart, "开启后只在对局中显示真空速")
+        # 文字显示模式 (三选一)
+        group_text = tk.LabelFrame(group_display, text="文字显示", padx=5, pady=2)
+        group_text.pack(fill=tk.X, pady=4)
+        self.var_text_mode = tk.StringVar(value=self.cfg.get('text_mode', 'ingame'))
+        for value, label, tip in (
+            ("always", "始终显示", "任何情况下都显示速度文字：车库、大厅、陆战、海战也显示。"),
+            ("ingame", "只在对局内显示", "只在空战对局中显示文字，车库、大厅、陆战、海战自动隐藏文字（＝原来的「智能隐藏」）。"),
+            ("never", "一直隐藏", "永远不显示文字，只留圆球（＝原来的「只显示圆球」）。"),
+        ):
+            rb_text = tk.Radiobutton(group_text, text=label, variable=self.var_text_mode, value=value)
+            rb_text.pack(anchor=tk.W)
+            ToolTip(rb_text, tip)
 
-        self.var_hide_text = tk.BooleanVar(value=self.cfg.get('hide_text', False))
-        tk.Checkbutton(group_display, text="只显示圆球 (始终隐藏文字)", variable=self.var_hide_text).pack(anchor=tk.W)
+        self.var_smart_ui = tk.BooleanVar(value=self.cfg.get('smart_hide_ui', False))
+        chk_smart_ui = tk.Checkbutton(group_display, text="智能隐藏UI (只在对战开始后显示圆球)", variable=self.var_smart_ui)
+        chk_smart_ui.pack(anchor=tk.W)
+        ToolTip(chk_smart_ui, "勾选后整个悬浮窗（圆球＋文字）在车库、大厅都不显示，只有进入空战对局才出现。")
         
         self.var_show_cross = tk.BooleanVar(value=self.cfg.get('show_crosshair', False))
         tk.Checkbutton(group_display, text="显示十字准星 (透明穿透)", variable=self.var_show_cross).pack(anchor=tk.W)
@@ -565,8 +658,8 @@ class SettingsWindow:
 
             self.var_unit.set(self.cfg['unit'])
             self.var_show_unit.set(self.cfg['show_unit'])
-            self.var_smart.set(self.cfg['smart_hide'])
-            self.var_hide_text.set(self.cfg['hide_text'])
+            self.var_text_mode.set(self.cfg.get('text_mode', 'ingame'))
+            self.var_smart_ui.set(self.cfg.get('smart_hide_ui', False))
             self.var_show_cross.set(self.cfg.get('show_crosshair', False))
             
             self.var_snd_enable.set(self.cfg['enable_sound'])
@@ -610,8 +703,8 @@ class SettingsWindow:
 
         new_unit = self.var_unit.get()
         new_show_unit = self.var_show_unit.get()
-        new_smart = self.var_smart.get()
-        new_hide_text = self.var_hide_text.get()
+        new_text_mode = self.var_text_mode.get()
+        new_smart_ui = self.var_smart_ui.get()
         new_show_cross = self.var_show_cross.get()
         
         new_snd_enable = self.var_snd_enable.get()
@@ -651,8 +744,8 @@ class SettingsWindow:
         self.cfg['warn_percent'] = new_warn_pct
         self.cfg['unit'] = new_unit
         self.cfg['show_unit'] = new_show_unit
-        self.cfg['smart_hide'] = new_smart
-        self.cfg['hide_text'] = new_hide_text
+        self.cfg['text_mode'] = new_text_mode
+        self.cfg['smart_hide_ui'] = new_smart_ui
         self.cfg['show_crosshair'] = new_show_cross
         
         self.cfg['enable_sound'] = new_snd_enable
@@ -747,12 +840,12 @@ class OverlayApp:
             self.canvas.create_line(cx, cy - r + inset, cx, cy + r - inset, fill='black', width=2)
 
         self.label = tk.Label(self.frame, text="Wait...", 
-                              font=(FONT_NAME, self.cfg['font_size'], "bold"), 
+                              font=(FONT_NAME, self.cfg['font_size'], "bold"),
                               fg=self.cfg['font_color'], bg='black')
         self.label.pack(side=tk.LEFT, anchor=tk.CENTER) # 文字也垂直居中
         
         # Right Click Menu
-        self.context_menu = tk.Menu(self.root, tearoff=0)
+        self.context_menu = tk.Menu(self.root, tearoff=0, font=MENU_FONT)
         self.context_menu.add_command(label="⚙ 设置 (Settings)", command=self.open_settings_window)
         self.context_menu.add_command(label="👁 隐藏 (Hide)", command=self.hide_window)
         
@@ -773,6 +866,9 @@ class OverlayApp:
             widget.bind("<ButtonRelease-1>", self.stop_move)
             widget.bind("<Button-3>", self.show_context_menu)
         
+        self.last_data = None
+        self.ui_visible = True   # 智能隐藏UI 的当前自动显隐状态
+        self.user_hidden = False # 用户手动隐藏后，智能隐藏UI 不再自动弹出
         self.is_running = True
         threading.Thread(target=self.setup_tray_icon, daemon=True).start()
         
@@ -782,10 +878,24 @@ class OverlayApp:
 
     def open_settings_window(self):
         if hasattr(self, 'setting_win_ref') and self.setting_win_ref and self.setting_win_ref.win.winfo_exists():
-            self.setting_win_ref.win.lift()
+            self.raise_settings_window()
             return
         self.setting_win_ref = SettingsWindow(self)
 
+    def raise_settings_window(self):
+        """把已打开的设置窗口调到最前面（可能被最小化或被其它窗口盖住）"""
+        win = self.setting_win_ref.win
+        win.deiconify()
+        win.attributes("-topmost", True)   # 临时置顶，确保浮到最前
+        win.lift()
+        win.after(600, lambda: self._unpin_settings(win))  # 随后恢复正常层级，不长期钉在最前
+
+    def _unpin_settings(self, win):
+        try:
+            if win.winfo_exists():
+                win.attributes("-topmost", False)
+        except Exception:
+            pass
     def apply_ui_update(self):
         # Called when settings change
         self.label.config(font=(FONT_NAME, self.cfg['font_size'], "bold"), fg=self.cfg['font_color'])
@@ -903,6 +1013,7 @@ class OverlayApp:
 
     def restore_and_lift(self):
         """恢复窗口并置顶"""
+        self.user_hidden = False
         # 1. 恢复显示 (deiconify)
         self.root.deiconify()
         
@@ -922,12 +1033,23 @@ class OverlayApp:
 
     def toggle_window(self, icon=None, item=None):
         if self.root.state() == 'normal':
+            self.user_hidden = True
             self.root.after(0, self.root.withdraw)
         else:
+            self.user_hidden = False
             self.root.after(0, self.restore_and_lift)
 
     def hide_window(self):
+        self.user_hidden = True
         self.root.withdraw()
+
+    def apply_auto_visibility(self, show):
+        """智能隐藏UI 的自动显隐（在主线程执行；用户手动隐藏后不自动弹出）"""
+        if show:
+            if not self.user_hidden:
+                self.restore_and_lift()
+        else:
+            self.root.withdraw()
 
     def quit_app(self, icon=None, item=None):
         self.is_running = False
@@ -1020,22 +1142,23 @@ class OverlayApp:
     def update_data_loop(self):
         while self.is_running:
             data = get_telemetry()
+            self.last_data = data
             
             # --- Config Values ---
             prefix = self.cfg.get('text_prefix', "IAS: ")
             unit_str = self.cfg.get('unit', 'km/h')
             show_unit = self.cfg.get('show_unit', True)
-            smart_hide = self.cfg.get('smart_hide', True)
+            text_mode = self.cfg.get('text_mode', 'ingame')
             
             base_color = self.cfg.get('font_color', '#00FF00')
             warn_color = self.cfg.get('warn_color', '#FF0000')
             warn_percent = self.cfg.get('warn_percent', 90) / 100.0
             
             # --- Visibility Logic ---
-            should_show = True
-            if smart_hide:
-                if not data['running'] or data['army'] != 'air':
-                    should_show = False
+            in_battle = data['running'] and data['army'] == 'air'
+            should_show = text_mode != 'never'
+            if text_mode == 'ingame':
+                should_show = in_battle
             
             display_text = ""
             final_color = base_color
@@ -1043,15 +1166,7 @@ class OverlayApp:
             
             if data['ias_kmh'] is not None:
                 val_kmh = data['ias_kmh']
-                val_disp = val_kmh
-                suffix = " km/h"
-                
-                if unit_str == 'kt':
-                    val_disp = val_kmh / 1.852
-                    suffix = " kt"
-                elif unit_str == 'mph':
-                    val_disp = val_kmh / 1.60934
-                    suffix = " mph"
+                val_disp, suffix = convert_speed(val_kmh, unit_str)
                     
                 if not show_unit:
                     suffix = ""
@@ -1116,8 +1231,13 @@ class OverlayApp:
             if self.is_logging_enabled and data['running'] and data['army'] == 'air':
                 self.logger.log_step(data, ab_result)
 
-            if self.cfg.get('hide_text', False):
-                display_text = ""
+            # 智能隐藏UI：勾选后只有对战开始才显示圆球界面
+            desired_ui = True
+            if self.cfg.get('smart_hide_ui', False):
+                desired_ui = in_battle
+            if desired_ui != self.ui_visible:
+                self.ui_visible = desired_ui
+                self.root.after(0, self.apply_auto_visibility, desired_ui)
             
             if not should_show:
                 display_text = ""

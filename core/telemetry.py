@@ -3,6 +3,7 @@ import requests
 def get_telemetry():
     """获取所有必要的遥测数据: {status, army, type, ias, mach, airbrake, ...}"""
     data = {
+        'api_ok': False,
         'running': False,
         'army': '',
         'type': '',
@@ -20,6 +21,7 @@ def get_telemetry():
         # 1. Check Mission Status
         r_mission = requests.get('http://127.0.0.1:8111/mission.json', timeout=0.05)
         if r_mission.ok:
+            data['api_ok'] = True
             mission = r_mission.json()
             data['running'] = (mission.get('status') == 'running')
         
