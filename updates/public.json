@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "tag_name": "v0.3.1",
+  "published_at": "2026-09-18T06:38:02Z",
+  "body": "修复应用更新检查限流 ",
+  "html_url": "https://github.com/KaerMorh/WTSpeeder/releases/tag/v0.3.1",
+  "assets": [
+    {
+      "name": "WTOverlay_Public.exe",
+      "browser_download_url": "https://github.com/KaerMorh/WTSpeeder/releases/download/v0.3.1/WTOverlay_Public.exe"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "browser_download_url": "https://github.com/KaerMorh/WTSpeeder/releases/download/v0.3.1/SHA256SUMS.txt"
+    }
+  ]
+}
