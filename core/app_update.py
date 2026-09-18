@@ -5,8 +5,12 @@ import subprocess
 import sys
 import tempfile
 import urllib.request
+from urllib.parse import urlparse
 
-from app_version import APP_VERSION, PUBLIC_EXE_NAME, PUBLIC_REPOSITORY
+from app_version import APP_VERSION, PUBLIC_EXE_NAME, PUBLIC_REPOSITORY, PUBLIC_UPDATE_URL
+
+
+MANIFEST_SCHEMA_VERSION = 1
 
 
 def _version_tuple(value):
@@ -20,11 +24,34 @@ def is_public_build():
     return bool(getattr(sys, "frozen", False)) and os.path.basename(sys.executable).lower() == PUBLIC_EXE_NAME.lower()
 
 
-def check_release():
-    url = f"https://api.github.com/repos/{PUBLIC_REPOSITORY}/releases/latest"
-    request = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": "WTSpeeder-Updater"})
+def _validate_release(release):
+    if not isinstance(release, dict) or release.get("schema_version") != MANIFEST_SCHEMA_VERSION:
+        raise ValueError("更新信息格式不受支持")
+    tag = release.get("tag_name")
+    _version_tuple(tag or "")
+    if not isinstance(release.get("body"), str) or not release["body"].strip():
+        raise ValueError("更新信息缺少中文说明")
+    if not isinstance(release.get("published_at"), str) or not release["published_at"].strip():
+        raise ValueError("更新信息缺少发布日期")
+
+    expected_prefix = f"/{PUBLIC_REPOSITORY}/releases/download/{tag}/"
+    assets = release.get("assets")
+    if not isinstance(assets, list):
+        raise ValueError("更新信息缺少下载文件")
+    for name in (PUBLIC_EXE_NAME, "SHA256SUMS.txt"):
+        asset = _asset(release, name)
+        url = asset.get("browser_download_url", "")
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or parsed.netloc.lower() != "github.com" or parsed.path != expected_prefix + name:
+            raise ValueError(f"{name} 下载地址无效")
+    return release
+
+
+def check_release(url=PUBLIC_UPDATE_URL):
+    request = urllib.request.Request(url, headers={"User-Agent": "WTSpeeder-Updater", "Cache-Control": "no-cache"})
     with urllib.request.urlopen(request, timeout=30) as response:
         release = json.load(response)
+    _validate_release(release)
     release["newer"] = _version_tuple(release["tag_name"]) > _version_tuple(APP_VERSION)
     return release
 

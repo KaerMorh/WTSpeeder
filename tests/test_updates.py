@@ -4,9 +4,11 @@ import os
 import shutil
 import tempfile
 import unittest
+from io import BytesIO
 from pathlib import Path
+from unittest.mock import patch
 
-from core.app_update import _version_tuple
+from core.app_update import _version_tuple, check_release
 from core.fm_versions import FMVersionManager, validate_csv_pair
 from FM.update_fm import (
     BlkxParser, FM_DATA_COLUMNS, FM_NAMES_COLUMNS, _write_records, run_automation,
@@ -14,6 +16,14 @@ from FM.update_fm import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+class URLResponse(BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 class LocalFMVersionManager(FMVersionManager):
@@ -79,6 +89,41 @@ class FMVersionTests(unittest.TestCase):
     def test_version_comparison(self):
         self.assertGreater(_version_tuple("v0.3.0"), _version_tuple("0.2.9"))
         self.assertEqual(_version_tuple("0.3.0"), (0, 3, 0))
+
+    def test_application_update_uses_static_manifest(self):
+        release = {
+            "schema_version": 1,
+            "tag_name": "v0.3.2",
+            "published_at": "2026-09-18T12:00:00Z",
+            "body": "测试更新说明",
+            "assets": [
+                {
+                    "name": name,
+                    "browser_download_url": f"https://github.com/KaerMorh/WTSpeeder/releases/download/v0.3.2/{name}",
+                }
+                for name in ("WTOverlay_Public.exe", "SHA256SUMS.txt")
+            ],
+        }
+        payload = json.dumps(release).encode("utf-8")
+        with patch("core.app_update.urllib.request.urlopen", return_value=URLResponse(payload)) as urlopen:
+            result = check_release("https://example.invalid/public.json")
+        self.assertTrue(result["newer"])
+        self.assertEqual(urlopen.call_args.args[0].full_url, "https://example.invalid/public.json")
+
+    def test_application_update_rejects_unexpected_asset_host(self):
+        release = {
+            "schema_version": 1,
+            "tag_name": "v0.3.2",
+            "published_at": "2026-09-18T12:00:00Z",
+            "body": "测试更新说明",
+            "assets": [
+                {"name": "WTOverlay_Public.exe", "browser_download_url": "https://example.invalid/program.exe"},
+                {"name": "SHA256SUMS.txt", "browser_download_url": "https://example.invalid/sums.txt"},
+            ],
+        }
+        with patch("core.app_update.urllib.request.urlopen", return_value=URLResponse(json.dumps(release).encode("utf-8"))):
+            with self.assertRaisesRegex(ValueError, "下载地址无效"):
+                check_release("https://example.invalid/public.json")
 
     def test_cleanup_keeps_latest_two_stable_selected_and_running(self):
         manager = FMVersionManager(root=str(self.root / "cache"), builtin_root=str(REPO_ROOT / "FM"))

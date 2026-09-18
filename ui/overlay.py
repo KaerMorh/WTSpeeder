@@ -4,6 +4,7 @@ from tkinter import ttk
 import threading
 import time
 import os
+import webbrowser
 from datetime import datetime
 import pystray
 from pystray import MenuItem as item
@@ -18,7 +19,7 @@ from core.fm_db import FM_DB
 from core.sound_manager import SoundManager
 from core.exp_telemetry import ExpTelemetry, get_ui_patcher
 from utils.logger import CSVLogger
-from app_version import APP_VERSION
+from app_version import APP_VERSION, PUBLIC_RELEASES_URL
 from core.app_update import check_release, download_release, install_on_exit, is_public_build
 from core.fm_versions import FMVersionManager, SCHEMA_VERSION
 
@@ -132,6 +133,7 @@ class SettingsWindow:
         self.btn_app_check.pack(side=tk.LEFT)
         self.btn_app_install = tk.Button(app_buttons, text="下载并安装", state=tk.DISABLED, command=self.install_app_update)
         self.btn_app_install.pack(side=tk.LEFT, padx=5)
+        tk.Button(app_buttons, text="打开发布页面", command=lambda: webbrowser.open(PUBLIC_RELEASES_URL)).pack(side=tk.LEFT)
         if not is_public_build():
             self.btn_app_check.config(state=tk.DISABLED)
 
@@ -160,7 +162,7 @@ class SettingsWindow:
 
     def _run_update_task(self, worker, finished):
         if self.update_busy:
-            return
+            return False
         self.update_busy = True
         def run():
             try:
@@ -169,15 +171,23 @@ class SettingsWindow:
             except Exception as exc:
                 self.win.after(0, lambda error=exc: finished(None, error))
         threading.Thread(target=run, daemon=True).start()
+        return True
 
     def check_app_update(self):
+        if self.update_busy:
+            return
+        self.available_release = None
+        self.btn_app_install.config(state=tk.DISABLED)
+        self._set_text(self.app_notes, "")
         self.app_update_status.set("正在检查应用更新……")
-        self._run_update_task(check_release, self._app_check_finished)
+        if self._run_update_task(check_release, self._app_check_finished):
+            self.btn_app_check.config(state=tk.DISABLED)
 
     def _app_check_finished(self, release, error):
         self.update_busy = False
+        self.btn_app_check.config(state=tk.NORMAL)
         if error:
-            self.app_update_status.set(f"检查失败，可重试：{error}")
+            self.app_update_status.set(f"检查失败，可重试或打开发布页面：{error}")
             return
         self.available_release = release
         tag = release.get("tag_name", "未知")
@@ -185,6 +195,8 @@ class SettingsWindow:
         if release.get("newer"):
             self.app_update_status.set(f"发现可用版本：{tag}")
             self.btn_app_install.config(state=tk.NORMAL)
+        elif release.get("tag_name") and release["tag_name"] != f"v{APP_VERSION}":
+            self.app_update_status.set(f"当前版本高于公开发布版本（远端 {tag}）")
         else:
             self.app_update_status.set(f"当前已是最新版本（远端 {tag}）")
 

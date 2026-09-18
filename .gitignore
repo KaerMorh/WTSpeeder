@@ -33,6 +33,7 @@ test_features/
 !utils/**
 !FM/**
 !sounds/**
+!updates/**
 !.github/workflows/fm-update.yml
 !.github/workflows/public-release.yml
 !tests/**

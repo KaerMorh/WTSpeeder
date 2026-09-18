@@ -58,3 +58,41 @@ jobs:
           if (-not $env:RELEASE_NOTES) { $env:RELEASE_NOTES = (git tag -l $env:RELEASE_TAG --format="%(contents)") }
           if ($env:RELEASE_NOTES) { $args += @("--notes", $env:RELEASE_NOTES) } else { $args += "--generate-notes" }
           & gh @args
+
+      - name: Publish static update manifest
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $release = gh release view $env:RELEASE_TAG --repo "${{ github.repository }}" --json tagName,publishedAt,body | ConvertFrom-Json
+          if (-not $release.body) { throw "Release notes are required for the update manifest" }
+          git fetch origin main
+          git switch main
+          git pull --ff-only origin main
+          New-Item -ItemType Directory -Force updates | Out-Null
+          $manifestPath = "updates/public.json"
+          if (Test-Path $manifestPath) {
+            $current = Get-Content $manifestPath -Raw | ConvertFrom-Json
+            if ([version]$current.tag_name.TrimStart("v") -gt [version]$release.tagName.TrimStart("v")) {
+              throw "Refusing to replace newer manifest $($current.tag_name) with $($release.tagName)"
+            }
+          }
+          $baseUrl = "https://github.com/${{ github.repository }}/releases/download/$($release.tagName)"
+          $manifest = [ordered]@{
+            schema_version = 1
+            tag_name = $release.tagName
+            published_at = $release.publishedAt
+            body = $release.body
+            html_url = "https://github.com/${{ github.repository }}/releases/tag/$($release.tagName)"
+            assets = @(
+              [ordered]@{ name = "WTOverlay_Public.exe"; browser_download_url = "$baseUrl/WTOverlay_Public.exe" }
+              [ordered]@{ name = "SHA256SUMS.txt"; browser_download_url = "$baseUrl/SHA256SUMS.txt" }
+            )
+          }
+          $manifest | ConvertTo-Json -Depth 4 | Set-Content $manifestPath -Encoding utf8
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add updates/public.json
+          if (git diff --cached --quiet) { exit 0 }
+          git commit -m "Publish application update manifest for $($release.tagName)"
+          git push origin HEAD:main
