@@ -1,5 +1,5 @@
 import os
-from config import resource_path
+from core.fm_versions import FMVersionManager
 
 class FM_DB:
     """处理飞机气动数据加载，支持可变后掠翼飞机"""
@@ -9,6 +9,8 @@ class FM_DB:
         self.crit_machs = {}
         # 名称映射: 游戏返回的 type -> FM 数据库中的 name
         self.name_to_fm = {}
+        self.version_manager = FMVersionManager()
+        self.data_directory = self.version_manager.resolve_for_startup()
         self.load_names_db()
         self.load_db()
     
@@ -81,7 +83,7 @@ class FM_DB:
     
     def load_names_db(self):
         """加载 fm_names_db.csv，建立游戏名称 -> FM名称的映射"""
-        csv_path = resource_path(os.path.join("FM", "fm_names_db.csv"))
+        csv_path = os.path.join(self.data_directory, "fm_names_db.csv")
         
         if not os.path.exists(csv_path):
             print(f"警告: 找不到名称映射文件 {csv_path}")
@@ -102,7 +104,7 @@ class FM_DB:
             print(f"加载名称映射出错: {e}")
         
     def load_db(self):
-        csv_path = resource_path(os.path.join("FM", "fm_data_db.csv"))
+        csv_path = os.path.join(self.data_directory, "fm_data_db.csv")
         
         if not os.path.exists(csv_path):
             print(f"警告: 找不到数据文件 {csv_path}")

@@ -5,7 +5,7 @@ FM Database Update Tool
 从 GitHub War Thunder Datamine 仓库更新本地飞行模型数据库
 
 使用方法:
-    python update_fm.py --add-missing    # 添加缺失的飞机FM和名称映射
+         # 添加缺失的飞机FM和名称映射
     python update_fm.py --check-updates  # 检查并更新已有飞机的FM数据
     python update_fm.py --all            # 执行全部操作
 
@@ -18,20 +18,27 @@ import sys
 import json
 import argparse
 import shutil
-from datetime import datetime
+import csv
+import hashlib
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any, Set
 
-# 确保可以导入依赖库
+# 自动入口只使用标准库；交互入口按需使用这些辅助依赖。
 try:
     import requests
+except ImportError:
+    requests = None
+try:
     from dotenv import load_dotenv
-    from tqdm import tqdm
-    # 加载环境变量
     load_dotenv()
-except ImportError as e:
-    print(f"错误: 缺少必要的依赖库 - {e}")
-    print("请运行: pip install requests python-dotenv tqdm")
-    sys.exit(1)
+except ImportError:
+    pass
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(iterable, **_kwargs):
+        return iterable
 
 
 # ============================================================================
@@ -301,6 +308,8 @@ class GitHubFetcher:
     """从 GitHub 获取 War Thunder Datamine 数据"""
     
     def __init__(self):
+        if requests is None:
+            raise RuntimeError("交互更新需要 requests；请先运行 pip install requests")
         self.session = requests.Session()
         self.session.headers.update({
             "Accept": "application/vnd.github.v3+json",
@@ -786,6 +795,188 @@ def check_and_update_aircraft(db: FMDatabase, fetcher: GitHubFetcher):
 
 
 # ============================================================================
+# GitHub Actions 非交互发布入口
+# ============================================================================
+
+def _read_records(path: Path, columns: List[str]) -> Dict[str, Dict]:
+    records = {}
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter=";")
+        if reader.fieldnames != columns:
+            raise ValueError(f"{path.name} 表头不符合预期")
+        for row in reader:
+            name = (row.get("Name") or "").strip()
+            if not name or name in records:
+                raise ValueError(f"{path.name} 包含空键或重复键: {name}")
+            records[name] = {column: row.get(column, "") for column in columns}
+    if not records:
+        raise ValueError(f"{path.name} 没有有效数据")
+    return records
+
+
+def _write_records(path: Path, records: Dict[str, Dict], columns: List[str]):
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=columns, delimiter=";", lineterminator="\n")
+        writer.writeheader()
+        for name in sorted(records):
+            writer.writerow({column: records[name].get(column, "") for column in columns})
+
+
+def _records_equal(left: Dict[str, Dict], right: Dict[str, Dict], columns: List[str]) -> bool:
+    if set(left) != set(right):
+        return False
+    for name in left:
+        for column in columns:
+            if not FMDatabase._values_equal(left[name].get(column, ""), right[name].get(column, "")):
+                return False
+    return True
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _change_notes(old_data, new_data, old_names, new_names) -> str:
+    added_fm = sorted(set(new_data) - set(old_data))
+    changed_fm = sorted(
+        name for name in set(old_data) & set(new_data)
+        if not _records_equal({name: old_data[name]}, {name: new_data[name]}, FM_DATA_COLUMNS)
+    )
+    added_names = sorted(set(new_names) - set(old_names))
+    changed_names = sorted(
+        name for name in set(old_names) & set(new_names)
+        if old_names[name] != new_names[name]
+    )
+    parts = []
+    if added_fm:
+        parts.append(f"新增 {len(added_fm)} 个机型")
+    if changed_fm:
+        parts.append(f"更新 {len(changed_fm)} 个机型的飞行限制")
+    if added_names:
+        parts.append(f"新增 {len(added_names)} 条名称映射")
+    if changed_names:
+        parts.append(f"更新 {len(changed_names)} 条名称映射")
+    details = added_fm + changed_fm + added_names + changed_names
+    note = "；".join(parts)
+    if details:
+        shown = "、".join(details[:12])
+        note += f"。涉及：{shown}"
+        if len(details) > 12:
+            note += f" 等 {len(details)} 项"
+    return note
+
+
+def run_automation(source_dir: str, source_commit: str, repo_root: str) -> int:
+    root = Path(repo_root).resolve()
+    fm_root = root / "FM"
+    source = Path(source_dir).resolve()
+    source_fm = source / "fm"
+    if not source_fm.is_dir():
+        raise ValueError("上游 flightmodels/fm 目录不存在")
+    if len(source_commit) != 40 or any(ch not in "0123456789abcdefABCDEF" for ch in source_commit):
+        raise ValueError("source_commit 必须是固定的完整 SHA")
+
+    state_path = fm_root / "check_state.json"
+    state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
+    if state.get("last_checked_commit") == source_commit:
+        print("上游提交未变化，不生成 FM 版本")
+        return 0
+
+    old_data = _read_records(fm_root / "fm_data_db.csv", FM_DATA_COLUMNS)
+    old_names = _read_records(fm_root / "fm_names_db.csv", FM_NAMES_COLUMNS)
+    new_data = {name: record.copy() for name, record in old_data.items()}
+    new_names = {name: record.copy() for name, record in old_names.items()}
+
+    fm_files = sorted(source_fm.glob("*.blkx"))
+    unit_files = sorted(source.glob("*.blkx"))
+    if not fm_files or not unit_files:
+        raise ValueError("上游 FM 或单位文件列表为空")
+    for path in fm_files:
+        content = path.read_text(encoding="utf-8")
+        parsed = BlkxParser.parse_json(content)
+        if parsed == {}:
+            # 上游保留少量空占位 FM；沿用基线的已知缺失，不发布空记录。
+            continue
+        if parsed is None:
+            raise ValueError(f"解析失败: {path.name}")
+        record = BlkxParser.extract_fm_data(content, path.stem)
+        if record is None:
+            raise ValueError(f"解析失败: {path.name}")
+        new_data[path.stem] = {column: record.get(column, "") for column in FM_DATA_COLUMNS}
+    for path in unit_files:
+        info = BlkxParser.extract_unit_info(path.read_text(encoding="utf-8"))
+        if info is None:
+            raise ValueError(f"解析失败: {path.name}")
+        fm_name = info.get("fm_name", "")
+        if info.get("type") == "helicopter" or not fm_name or fm_name not in new_data:
+            continue
+        old_english = old_names.get(path.stem, {}).get("English", "")
+        new_names[path.stem] = {
+            "Name": path.stem,
+            "FmName": fm_name,
+            "Type": info.get("type", "fighter"),
+            "English": info.get("english") or old_english,
+        }
+
+    data_changed = not _records_equal(old_data, new_data, FM_DATA_COLUMNS)
+    names_changed = old_names != new_names
+    index_path = fm_root / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    has_automatic = any(version.get("kind") == "automatic" for version in index.get("versions", []))
+    state["last_checked_commit"] = source_commit
+    state["checked_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    if not data_changed and not names_changed and has_automatic:
+        state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print("有效 FM 数据未变化，不生成版本")
+        return 0
+
+    now = datetime.now(timezone.utc)
+    version_id = now.strftime("fm-%Y%m%d-%H%M%S-") + source_commit[:8].lower() + "-automatic"
+    published_at = now.isoformat(timespec="seconds").replace("+00:00", "Z")
+    notes = (_change_notes(old_data, new_data, old_names, new_names)
+             if data_changed or names_changed
+             else "首次自动构建，与人工稳定版数据一致")
+    version_dir = fm_root / "versions" / version_id
+    version_dir.mkdir(parents=True, exist_ok=False)
+    _write_records(version_dir / "fm_data_db.csv", new_data, FM_DATA_COLUMNS)
+    _write_records(version_dir / "fm_names_db.csv", new_names, FM_NAMES_COLUMNS)
+    _write_records(fm_root / "fm_data_db.csv", new_data, FM_DATA_COLUMNS)
+    _write_records(fm_root / "fm_names_db.csv", new_names, FM_NAMES_COLUMNS)
+
+    files = {}
+    for filename in ("fm_data_db.csv", "fm_names_db.csv"):
+        path = version_dir / filename
+        files[filename] = {
+            "url": f"https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/{version_id}/{filename}",
+            "sha256": _sha256(path),
+            "size": path.stat().st_size,
+        }
+    manifest = {
+        "id": version_id,
+        "published_at": published_at,
+        "kind": "automatic",
+        "notes": notes,
+        "schema_version": 1,
+        "source_commit": source_commit.lower(),
+        "files": files,
+    }
+    (version_dir / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    index.setdefault("versions", []).append(manifest)
+    index["versions"] = sorted(
+        index["versions"], key=lambda value: (value["published_at"], value["id"]), reverse=True)
+    index_path.write_text(json.dumps(index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"已生成 {version_id}: {notes}")
+    return 0
+
+
+# ============================================================================
 # 主入口
 # ============================================================================
 
@@ -807,13 +998,23 @@ def main():
                         help="检查并更新已有飞机的FM数据")
     parser.add_argument("--all", action="store_true",
                         help="执行全部操作")
+    parser.add_argument("--automation", action="store_true",
+                        help="从固定提交的本地上游目录执行非交互自动发布")
+    parser.add_argument("--source-dir", help="上游 flightmodels 目录")
+    parser.add_argument("--source-commit", help="上游完整提交 SHA")
+    parser.add_argument("--repo-root", default=os.path.dirname(SCRIPT_DIR), help="本仓库根目录")
     
     args = parser.parse_args()
     
     # 如果没有任何参数，显示帮助
-    if not any([args.add_missing, args.check_updates, args.all]):
+    if not any([args.add_missing, args.check_updates, args.all, args.automation]):
         parser.print_help()
         return
+
+    if args.automation:
+        if not args.source_dir or not args.source_commit:
+            parser.error("--automation 需要 --source-dir 和 --source-commit")
+        return run_automation(args.source_dir, args.source_commit, args.repo_root)
     
     print("="*60)
     print("FM 数据库更新工具")
@@ -833,4 +1034,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "stable_id": "fm-20260918-054634-manual",
+  "versions": [
+    {
+      "id": "fm-20260918-054634-manual",
+      "published_at": "2026-09-18T05:46:34Z",
+      "kind": "manual",
+      "notes": "问鼎九天版本FM",
+      "schema_version": 1,
+      "source_commit": "",
+      "source_note": "本地基线，无法确认上游提交",
+      "files": {
+        "fm_data_db.csv": {
+          "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20260918-054634-manual/fm_data_db.csv",
+          "sha256": "925a0175d5d8d1857a89cc45a3311137457016ba2c8c90da5ac93f78740e3357",
+          "size": 154596
+        },
+        "fm_names_db.csv": {
+          "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20260918-054634-manual/fm_names_db.csv",
+          "sha256": "762750fbe5e6985e471b3ae71672cb1981bebdacdd38ca121640cd8638ffa224",
+          "size": 71531
+        }
+      }
+    }
+  ]
+}

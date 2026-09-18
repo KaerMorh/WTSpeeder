@@ -1,0 +1,70 @@
+name: FM data update
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fm-data-publish
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolve fixed upstream commit
+        id: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(git ls-remote https://github.com/gszabi99/War-Thunder-Datamine.git refs/heads/master | cut -f1)"
+          test "${#sha}" -eq 40
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          last="$(python -c "import json; print(json.load(open('FM/check_state.json')).get('last_checked_commit', ''))")"
+          if [ "$last" = "$sha" ]; then
+            echo "unchanged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "unchanged=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out upstream FM subtree at fixed commit
+        if: steps.upstream.outputs.unchanged != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --filter=blob:none --no-checkout https://github.com/gszabi99/War-Thunder-Datamine.git upstream
+          git -C upstream sparse-checkout set aces.vromfs.bin_u/gamedata/flightmodels
+          git -C upstream checkout --detach "${{ steps.upstream.outputs.sha }}"
+
+      - name: Build and validate candidate
+        if: steps.upstream.outputs.unchanged != 'true'
+        run: >-
+          python FM/update_fm.py --automation
+          --source-dir upstream/aces.vromfs.bin_u/gamedata/flightmodels
+          --source-commit "${{ steps.upstream.outputs.sha }}"
+          --repo-root .
+
+      - name: Commit checked state or immutable FM version
+        if: steps.upstream.outputs.unchanged != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- FM/fm_data_db.csv FM/fm_names_db.csv FM/index.json FM/check_state.json && [ -z "$(git status --short --untracked-files=all FM/versions)" ]; then
+            echo "No repository changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add FM/fm_data_db.csv FM/fm_names_db.csv FM/index.json FM/check_state.json
+          git add 'FM/versions/*/fm_data_db.csv' 'FM/versions/*/fm_names_db.csv' 'FM/versions/*/manifest.json'
+          git commit -m "Update FM data from ${{ steps.upstream.outputs.sha }}"
+          git push origin HEAD:main

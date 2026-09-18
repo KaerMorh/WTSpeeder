@@ -1,0 +1,2 @@
+FM/*.csv -text
+FM/versions/*/*.csv -text

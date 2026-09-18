@@ -18,9 +18,12 @@ test_features/
 
 # --- 3. 文件白名单 (核心源码) ---
 !README.md
+!AGENTS.md
+!app_version.py
 !LICENSE
 !requirements.txt
 !.gitignore
+!.gitattributes
 
 # 核心代码
 !main.py
@@ -30,6 +33,9 @@ test_features/
 !utils/**
 !FM/**
 !sounds/**
+!.github/workflows/fm-update.yml
+!.github/workflows/public-release.yml
+!tests/**
 
 # 构建相关 (仅保留公开 spec)
 !public.spec
@@ -51,4 +57,3 @@ FM/backups/fm_names_db_20251229_105722.csv
 FM/backups/fm_names_db_20251229_113919.csv
 FM/backups/fm_names_db_20251229_142726.csv
 FM/backups/fm_names_db_20251229_153044.csv
-

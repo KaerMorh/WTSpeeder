@@ -1,0 +1,60 @@
+name: Public application release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Application tag, for example v0.3.0"
+        required: true
+        type: string
+      notes:
+        description: "Chinese user-visible release notes"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-public:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate requested version
+        shell: pwsh
+        run: |
+          $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
+          $version = python -c "from app_version import APP_VERSION; print(APP_VERSION)"
+          if ($tag -ne "v$version") { throw "Tag $tag does not match APP_VERSION $version" }
+          "RELEASE_TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Install build dependencies
+        run: python -m pip install pyinstaller requests pygame pystray Pillow
+
+      - name: Build Public only
+        run: pyinstaller --clean --noconfirm public.spec
+
+      - name: Create checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash -Algorithm SHA256 dist/WTOverlay_Public.exe).Hash.ToLowerInvariant()
+          "$hash *WTOverlay_Public.exe" | Set-Content -Encoding ascii SHA256SUMS.txt
+
+      - name: Publish exact Public assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_NOTES: ${{ inputs.notes }}
+        run: |
+          $args = @("release", "create", $env:RELEASE_TAG, "dist/WTOverlay_Public.exe", "SHA256SUMS.txt", "--repo", "${{ github.repository }}", "--title", "WTSpeeder $env:RELEASE_TAG")
+          if (-not $env:RELEASE_NOTES) { $env:RELEASE_NOTES = (git tag -l $env:RELEASE_TAG --format="%(contents)") }
+          if ($env:RELEASE_NOTES) { $args += @("--notes", $env:RELEASE_NOTES) } else { $args += "--generate-notes" }
+          & gh @args

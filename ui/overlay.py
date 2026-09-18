@@ -4,6 +4,7 @@ from tkinter import ttk
 import threading
 import time
 import os
+from datetime import datetime
 import pystray
 from pystray import MenuItem as item
 from PIL import Image, ImageDraw
@@ -17,6 +18,9 @@ from core.fm_db import FM_DB
 from core.sound_manager import SoundManager
 from core.exp_telemetry import ExpTelemetry, get_ui_patcher
 from utils.logger import CSVLogger
+from app_version import APP_VERSION
+from core.app_update import check_release, download_release, install_on_exit, is_public_build
+from core.fm_versions import FMVersionManager, SCHEMA_VERSION
 
 class ToolTip:
     """简单的工具提示控件"""
@@ -98,16 +102,189 @@ class SettingsWindow:
         self.tab_ui = tk.Frame(self.notebook)
         self.tab_func = tk.Frame(self.notebook)
         self.tab_exp = tk.Frame(self.notebook)
+        self.tab_update = tk.Frame(self.notebook)
         
         self.notebook.add(self.tab_ui, text="界面显示")
         self.notebook.add(self.tab_func, text="功能设置")
+        self.notebook.add(self.tab_update, text="更新")
         if ExpTelemetry().is_available:
             self.notebook.add(self.tab_exp, text="实验功能")
             
         self.setup_tab_ui()
         self.setup_tab_func()
+        self.setup_tab_update()
         if ExpTelemetry().is_available:
             self.setup_tab_exp()
+
+    def setup_tab_update(self):
+        self.fm_manager = FMVersionManager()
+        self.update_busy = False
+        app_group = tk.LabelFrame(self.tab_update, text="应用更新", padx=8, pady=8)
+        app_group.pack(fill=tk.X, padx=10, pady=6)
+        mode = "Public" if is_public_build() else "源码/本地构建，应用更新不适用"
+        self.app_update_status = tk.StringVar(value=f"当前版本：{APP_VERSION}　{mode}")
+        tk.Label(app_group, textvariable=self.app_update_status, anchor="w", justify=tk.LEFT).pack(fill=tk.X)
+        self.app_notes = tk.Text(app_group, height=4, wrap=tk.WORD, state=tk.DISABLED)
+        self.app_notes.pack(fill=tk.X, pady=4)
+        app_buttons = tk.Frame(app_group)
+        app_buttons.pack(fill=tk.X)
+        self.btn_app_check = tk.Button(app_buttons, text="检查应用更新", command=self.check_app_update)
+        self.btn_app_check.pack(side=tk.LEFT)
+        self.btn_app_install = tk.Button(app_buttons, text="下载并安装", state=tk.DISABLED, command=self.install_app_update)
+        self.btn_app_install.pack(side=tk.LEFT, padx=5)
+        if not is_public_build():
+            self.btn_app_check.config(state=tk.DISABLED)
+
+        fm_group = tk.LabelFrame(self.tab_update, text="FM 数据更新", padx=8, pady=8)
+        fm_group.pack(fill=tk.BOTH, expand=True, padx=10, pady=6)
+        self.fm_status = tk.StringVar()
+        tk.Label(fm_group, textvariable=self.fm_status, anchor="w", justify=tk.LEFT).pack(fill=tk.X)
+        row = tk.Frame(fm_group)
+        row.pack(fill=tk.X, pady=4)
+        self.fm_choice = ttk.Combobox(row, state="readonly", width=54)
+        self.fm_choice.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.fm_choice.bind("<<ComboboxSelected>>", self.show_fm_details)
+        self.btn_fm_select = tk.Button(row, text="下次启动使用", command=self.select_fm_version)
+        self.btn_fm_select.pack(side=tk.LEFT, padx=5)
+        self.btn_fm_sync = tk.Button(fm_group, text="检查并下载 FM 更新", command=self.sync_fm_versions)
+        self.btn_fm_sync.pack(anchor=tk.W)
+        self.fm_details = tk.Text(fm_group, height=8, wrap=tk.WORD, state=tk.DISABLED)
+        self.fm_details.pack(fill=tk.BOTH, expand=True, pady=4)
+        self.refresh_fm_versions()
+
+    def _set_text(self, widget, value):
+        widget.config(state=tk.NORMAL)
+        widget.delete("1.0", tk.END)
+        widget.insert("1.0", value)
+        widget.config(state=tk.DISABLED)
+
+    def _run_update_task(self, worker, finished):
+        if self.update_busy:
+            return
+        self.update_busy = True
+        def run():
+            try:
+                result = worker()
+                self.win.after(0, lambda: finished(result, None))
+            except Exception as exc:
+                self.win.after(0, lambda error=exc: finished(None, error))
+        threading.Thread(target=run, daemon=True).start()
+
+    def check_app_update(self):
+        self.app_update_status.set("正在检查应用更新……")
+        self._run_update_task(check_release, self._app_check_finished)
+
+    def _app_check_finished(self, release, error):
+        self.update_busy = False
+        if error:
+            self.app_update_status.set(f"检查失败，可重试：{error}")
+            return
+        self.available_release = release
+        tag = release.get("tag_name", "未知")
+        self._set_text(self.app_notes, release.get("body") or "此版本没有更新说明。")
+        if release.get("newer"):
+            self.app_update_status.set(f"发现可用版本：{tag}")
+            self.btn_app_install.config(state=tk.NORMAL)
+        else:
+            self.app_update_status.set(f"当前已是最新版本（远端 {tag}）")
+
+    def install_app_update(self):
+        release = getattr(self, "available_release", None)
+        if not release:
+            return
+        self.app_update_status.set("正在下载并校验应用更新……")
+        self.btn_app_install.config(state=tk.DISABLED)
+        self._run_update_task(lambda: download_release(release), self._app_download_finished)
+
+    def _app_download_finished(self, path, error):
+        self.update_busy = False
+        if error:
+            self.app_update_status.set(f"下载失败，旧程序未改动：{error}")
+            self.btn_app_install.config(state=tk.NORMAL)
+            return
+        if messagebox.askyesno("安装更新", "更新已校验。现在退出并替换 Public 程序吗？"):
+            try:
+                install_on_exit(path)
+                self.app.quit_app()
+            except Exception as exc:
+                self.app_update_status.set(f"无法自动替换；已下载文件位于 {path}：{exc}")
+
+    def refresh_fm_versions(self):
+        versions = sorted(
+            self.fm_manager.index.get("versions", []),
+            key=lambda value: (value.get("published_at", ""), value.get("id", "")),
+            reverse=True,
+        )
+        latest = self.fm_manager.latest_published()
+        stable_id = self.fm_manager.index.get("stable_id")
+        running = self.app.fm_db.version_manager.current_id
+        selected = self.fm_manager.state.get("selected_id") or stable_id
+        labels = []
+        self.fm_label_versions = {}
+        for version in versions:
+            tags = []
+            if latest and version["id"] == latest["id"]:
+                tags.append("推荐")
+            if version["id"] == stable_id:
+                tags.append("人工稳定版")
+            if version["id"] == running:
+                tags.append("当前使用")
+            if version.get("schema_version") != SCHEMA_VERSION:
+                tags.append("需升级应用")
+            label = f"{version['id']}　{self._local_time(version.get('published_at', ''))}"
+            if tags:
+                label += "　[" + " / ".join(tags) + "]"
+            labels.append(label)
+            self.fm_label_versions[label] = version
+        self.fm_choice["values"] = labels
+        target = next((label for label, version in self.fm_label_versions.items() if version["id"] == selected), labels[0] if labels else "")
+        self.fm_choice.set(target)
+        checked = self.fm_manager.state.get("last_checked_at", "尚未联网检查")
+        self.fm_status.set(f"当前使用：{running or '内置基线'}　下次启动：{selected or running or '内置基线'}\n上次检查：{checked}")
+        self.show_fm_details()
+
+    def _local_time(self, value):
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return parsed.astimezone().strftime("%Y-%m-%d %H:%M")
+        except (ValueError, AttributeError):
+            return value or "未知"
+
+    def show_fm_details(self, event=None):
+        version = getattr(self, "fm_label_versions", {}).get(self.fm_choice.get())
+        if not version:
+            return
+        kind = "人工构建" if version.get("kind") == "manual" else "自动构建"
+        compatibility = "兼容" if version.get("schema_version") == SCHEMA_VERSION else "需升级应用，不能启用"
+        text = (f"版本：{version.get('id')}\n更新时间：{self._local_time(version.get('published_at', ''))}\n"
+                f"来源：{kind}\n说明：{version.get('notes', '')}")
+        text += f"\n格式：{compatibility}"
+        self._set_text(self.fm_details, text)
+
+    def select_fm_version(self):
+        version = getattr(self, "fm_label_versions", {}).get(self.fm_choice.get())
+        if not version:
+            return
+        try:
+            self.fm_manager.choose(version["id"])
+            self.fm_status.set(f"已选择 {version['id']}，将在下次启动生效；当前运行数据未改变。")
+            self.refresh_fm_versions()
+        except Exception as exc:
+            messagebox.showerror("FM 选择失败", str(exc))
+
+    def sync_fm_versions(self):
+        self.fm_status.set("正在检查并下载 FM 更新……")
+        self.btn_fm_sync.config(state=tk.DISABLED)
+        self._run_update_task(self.fm_manager.sync, self._fm_sync_finished)
+
+    def _fm_sync_finished(self, versions, error):
+        self.update_busy = False
+        self.btn_fm_sync.config(state=tk.NORMAL)
+        if error:
+            self.fm_status.set(f"FM 更新失败，可重试；现有数据继续可用：{error}")
+            return
+        self.refresh_fm_versions()
+        self.fm_status.set(self.fm_status.get() + "\n同步完成。推荐版本仅标记最新发布版。")
 
     def setup_tab_ui(self):
         pad_opts = {'padx': 10, 'pady': 5}
