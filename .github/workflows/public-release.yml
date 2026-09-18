@@ -56,9 +56,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_NOTES: ${{ inputs.notes }}
         run: |
-          $args = @("release", "create", $env:RELEASE_TAG, "dist/WTOverlay_Public.exe", "SHA256SUMS.txt", "--repo", "${{ github.repository }}", "--title", "WTSpeeder $env:RELEASE_TAG")
-          if (-not $env:RELEASE_NOTES) { $env:RELEASE_NOTES = (git tag -l $env:RELEASE_TAG --format="%(contents)") }
-          if ($env:RELEASE_NOTES) { $args += @("--notes", $env:RELEASE_NOTES) } else { $args += "--generate-notes" }
+          $notes = $env:RELEASE_NOTES
+          if (-not $notes) { $notes = (git tag -l $env:RELEASE_TAG --format="%(contents)") -join "`n" }
+          if (-not $notes) { $notes = (git log -1 --format="%B" $env:RELEASE_TAG) -join "`n" }
+          $notes = $notes.Trim()
+          if (-not $notes) { throw "Release notes are required for the update manifest" }
+          $args = @("release", "create", $env:RELEASE_TAG, "dist/WTOverlay_Public.exe", "SHA256SUMS.txt", "--repo", "${{ github.repository }}", "--title", "WTSpeeder $env:RELEASE_TAG", "--notes", $notes)
           & gh @args
 
       - name: Publish static update manifest
