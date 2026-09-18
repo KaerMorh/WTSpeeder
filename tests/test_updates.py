@@ -33,10 +33,13 @@ class FMVersionTests(unittest.TestCase):
         version_id = "fm-20260918-054634-manual"
         manifest = json.loads((REPO_ROOT / "FM" / "versions" / version_id / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["notes"], "问鼎九天版本FM")
+        expected_hashes = {
+            "fm_data_db.csv": "925a0175d5d8d1857a89cc45a3311137457016ba2c8c90da5ac93f78740e3357",
+            "fm_names_db.csv": "762750fbe5e6985e471b3ae71672cb1981bebdacdd38ca121640cd8638ffa224",
+        }
         for filename in ("fm_data_db.csv", "fm_names_db.csv"):
-            original = (REPO_ROOT / "FM" / filename).read_bytes()
             frozen = (REPO_ROOT / "FM" / "versions" / version_id / filename).read_bytes()
-            self.assertEqual(original, frozen)
+            self.assertEqual(hashlib.sha256(frozen).hexdigest(), expected_hashes[filename])
             self.assertEqual(hashlib.sha256(frozen).hexdigest(), manifest["files"][filename]["sha256"])
 
     def test_latest_is_by_publication_time_not_kind(self):
