@@ -148,8 +148,11 @@ class SettingsWindow:
         self.fm_choice.bind("<<ComboboxSelected>>", self.show_fm_details)
         self.btn_fm_select = tk.Button(row, text="下次启动使用", command=self.select_fm_version)
         self.btn_fm_select.pack(side=tk.LEFT, padx=5)
-        self.btn_fm_sync = tk.Button(fm_group, text="检查并下载 FM 更新", command=self.sync_fm_versions)
-        self.btn_fm_sync.pack(anchor=tk.W)
+        fm_buttons = tk.Frame(fm_group)
+        fm_buttons.pack(fill=tk.X)
+        self.btn_fm_sync = tk.Button(fm_buttons, text="检查并下载 FM 更新", command=self.sync_fm_versions)
+        self.btn_fm_sync.pack(side=tk.LEFT)
+        tk.Button(fm_buttons, text="打开 FM 目录", command=self.open_fm_directory).pack(side=tk.LEFT, padx=5)
         self.fm_details = tk.Text(fm_group, height=8, wrap=tk.WORD, state=tk.DISABLED)
         self.fm_details.pack(fill=tk.BOTH, expand=True, pady=4)
         self.refresh_fm_versions()
@@ -288,6 +291,13 @@ class SettingsWindow:
         self.fm_status.set("正在检查并下载 FM 更新……")
         self.btn_fm_sync.config(state=tk.DISABLED)
         self._run_update_task(self.fm_manager.sync, self._fm_sync_finished)
+
+    def open_fm_directory(self):
+        try:
+            os.makedirs(self.fm_manager.root, exist_ok=True)
+            os.startfile(os.path.normpath(self.fm_manager.root))
+        except OSError as exc:
+            messagebox.showerror("无法打开 FM 目录", str(exc))
 
     def _fm_sync_finished(self, versions, error):
         self.update_busy = False

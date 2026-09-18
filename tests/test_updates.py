@@ -63,6 +63,15 @@ class FMVersionTests(unittest.TestCase):
         }
         self.assertEqual(manager.latest()["id"], "new-manual")
 
+    def test_builtin_fm_is_copied_to_appdata_cache(self):
+        manager = FMVersionManager(root=str(self.root / "cache"), builtin_root=str(REPO_ROOT / "FM"))
+        directory = Path(manager.resolve_for_startup())
+        self.assertEqual(directory.parent, Path(manager.versions_root))
+        self.assertEqual(directory.name, "fm-20260918-054634-manual")
+        for filename in ("fm_data_db.csv", "fm_names_db.csv", "manifest.json"):
+            self.assertTrue((directory / filename).is_file())
+        validate_csv_pair(str(directory))
+
     def test_download_hash_failure_keeps_existing_selection(self):
         source = self.root / "source"
         source.mkdir()

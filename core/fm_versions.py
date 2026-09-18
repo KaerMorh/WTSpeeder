@@ -119,6 +119,32 @@ class FMVersionManager:
     def directory(self, version_id):
         return self._cached_directory(version_id) or self._builtin_directory(version_id)
 
+    def _cache_builtin_version(self, version_id):
+        source = self._builtin_directory(version_id)
+        if not source:
+            return None
+        target = os.path.join(self.versions_root, version_id)
+        if os.path.isdir(target):
+            return target
+        os.makedirs(self.versions_root, exist_ok=True)
+        temporary = tempfile.mkdtemp(prefix=".builtin-", dir=self.versions_root)
+        try:
+            for filename in (*CSV_FILES, "manifest.json"):
+                source_path = os.path.join(source, filename)
+                if os.path.isfile(source_path):
+                    shutil.copyfile(source_path, os.path.join(temporary, filename))
+            validate_csv_pair(temporary)
+            try:
+                os.replace(temporary, target)
+            except OSError:
+                if not os.path.isdir(target):
+                    raise
+                shutil.rmtree(temporary, ignore_errors=True)
+            return target
+        except Exception:
+            shutil.rmtree(temporary, ignore_errors=True)
+            raise
+
     def resolve_for_startup(self):
         stable_id = self.index.get("stable_id")
         requested = self.state.get("selected_id") or stable_id
@@ -134,6 +160,12 @@ class FMVersionManager:
         except (OSError, ValueError):
             directory = self.builtin_root
             requested = stable_id or "builtin"
+        builtin_directory = self._builtin_directory(requested)
+        if builtin_directory and os.path.normcase(directory) == os.path.normcase(builtin_directory):
+            try:
+                directory = self._cache_builtin_version(requested) or directory
+            except OSError:
+                pass
         self.current_id = requested
         self.state["running_id"] = requested
         _write_json(self.state_path, self.state)
