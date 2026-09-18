@@ -8,7 +8,7 @@ from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
 
-from core.app_update import _version_tuple, check_release
+from core.app_update import _version_tuple, check_release, is_public_build
 from core.fm_versions import FMVersionManager, validate_csv_pair
 from FM.update_fm import (
     BlkxParser, FM_DATA_COLUMNS, FM_NAMES_COLUMNS, _write_records, run_automation,
@@ -124,6 +124,21 @@ class FMVersionTests(unittest.TestCase):
         with patch("core.app_update.urllib.request.urlopen", return_value=URLResponse(json.dumps(release).encode("utf-8"))):
             with self.assertRaisesRegex(ValueError, "下载地址无效"):
                 check_release("https://example.invalid/public.json")
+
+    def test_public_build_detection_does_not_depend_on_executable_name(self):
+        marker = self.root / "public_build.marker"
+        marker.write_text("WTSpeeder Public\n", encoding="utf-8")
+        with patch("core.app_update.sys.frozen", True, create=True), \
+                patch("core.app_update.sys._MEIPASS", str(self.root), create=True), \
+                patch("core.app_update.sys.executable", str(self.root / "任意文件名.exe")):
+            self.assertTrue(is_public_build())
+
+    def test_private_or_source_build_has_no_public_marker(self):
+        with patch("core.app_update.sys.frozen", True, create=True), \
+                patch("core.app_update.sys._MEIPASS", str(self.root), create=True):
+            self.assertFalse(is_public_build())
+        with patch("core.app_update.sys.frozen", False, create=True):
+            self.assertFalse(is_public_build())
 
     def test_cleanup_keeps_latest_two_stable_selected_and_running(self):
         manager = FMVersionManager(root=str(self.root / "cache"), builtin_root=str(REPO_ROOT / "FM"))

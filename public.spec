@@ -7,6 +7,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
+        ('public_build.marker', '.'),
         ('icon.ico', '.'),
         ('sounds/beep_fast.wav', 'sounds'),
         ('sounds/beep_force_critical.wav', 'sounds'),

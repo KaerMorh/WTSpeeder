@@ -20,6 +20,7 @@ test_features/
 !README.md
 !AGENTS.md
 !app_version.py
+!public_build.marker
 !LICENSE
 !requirements.txt
 !.gitignore

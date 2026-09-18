@@ -21,7 +21,10 @@ def _version_tuple(value):
 
 
 def is_public_build():
-    return bool(getattr(sys, "frozen", False)) and os.path.basename(sys.executable).lower() == PUBLIC_EXE_NAME.lower()
+    if not getattr(sys, "frozen", False):
+        return False
+    bundle_root = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+    return os.path.isfile(os.path.join(bundle_root, "public_build.marker"))
 
 
 def _validate_release(release):
