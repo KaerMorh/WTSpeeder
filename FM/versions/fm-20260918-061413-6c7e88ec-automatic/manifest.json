@@ -1,0 +1,20 @@
+{
+  "id": "fm-20260918-061413-6c7e88ec-automatic",
+  "published_at": "2026-09-18T06:14:13Z",
+  "kind": "automatic",
+  "notes": "新增 37 个机型；更新 877 个机型的飞行限制；新增 77 条名称映射；更新 343 条名称映射。涉及：a_4ptm_malaysia、arado_234b_2_mt、aw_159、b_25j_1、b_52h、ca_27_mk_32、f_101c、f_102a_greece、f_102a_late、f_14d、f_16a_block_72v_china、f_16xl 等 1334 项",
+  "schema_version": 1,
+  "source_commit": "6c7e88ec13cd505937d65352837f4076e09fbc4f",
+  "files": {
+    "fm_data_db.csv": {
+      "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20260918-061413-6c7e88ec-automatic/fm_data_db.csv",
+      "sha256": "dec7392d69bfe9280a36bdc6a5d1058797d2a432df1fdcd7d5049503f7987458",
+      "size": 169035
+    },
+    "fm_names_db.csv": {
+      "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20260918-061413-6c7e88ec-automatic/fm_names_db.csv",
+      "sha256": "8174c253e3d1901296363fcc9831373c9f1f2e27aea7941be76b97c3b8b7fe8b",
+      "size": 74293
+    }
+  }
+}
