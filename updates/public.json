@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "tag_name": "v0.3.1",
-  "published_at": "2026-09-18T06:52:14Z",
-  "body": "修正 Public 构建身份识别 ",
+  "published_at": "2026-09-18T08:16:52Z",
+  "body": "修复应用更新检查，并将 FM 数据缓存到 AppData。\n\n- 应用更新检查改用公开静态清单，避免 GitHub 匿名 API 限流导致检查失败。\n- Public 构建改用内嵌标记识别，下载后即使被重命名，也能正常显示并使用应用更新。\n- 更新页面增加直接打开发布页面的入口；检查期间禁用重复操作，失败时清除旧的待安装状态。\n- FM 数据首次启动会缓存到 %APPDATA%\\WTFriendCounter\\fm\\versions，并在更新页面新增“打开 FM 目录”按钮。",
   "html_url": "https://github.com/KaerMorh/WTSpeeder/releases/tag/v0.3.1",
   "assets": [
     {
