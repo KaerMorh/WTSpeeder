@@ -3,6 +3,26 @@
   "stable_id": "fm-20260918-054634-manual",
   "versions": [
     {
+      "id": "fm-20260921-215845-32912b19-automatic",
+      "published_at": "2026-09-21T21:58:45Z",
+      "kind": "automatic",
+      "notes": "更新 1 条名称映射。涉及：f_86em_greece",
+      "schema_version": 1,
+      "source_commit": "32912b19fc2e61615c3940a5dc502493064cc475",
+      "files": {
+        "fm_data_db.csv": {
+          "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20260921-215845-32912b19-automatic/fm_data_db.csv",
+          "sha256": "dec7392d69bfe9280a36bdc6a5d1058797d2a432df1fdcd7d5049503f7987458",
+          "size": 169035
+        },
+        "fm_names_db.csv": {
+          "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20260921-215845-32912b19-automatic/fm_names_db.csv",
+          "sha256": "4fdbd5b182febd99a9d74fe813192b1f34ba8f1d554ac949567cc52384872564",
+          "size": 74285
+        }
+      }
+    },
+    {
       "id": "fm-20260918-061413-6c7e88ec-automatic",
       "published_at": "2026-09-18T06:14:13Z",
       "kind": "automatic",
