@@ -3,6 +3,26 @@
   "stable_id": "fm-20260918-054634-manual",
   "versions": [
     {
+      "id": "fm-20260925-171135-c0bb0c5b-automatic",
+      "published_at": "2026-09-25T17:11:35Z",
+      "kind": "automatic",
+      "notes": "新增 2 条名称映射。涉及：h_34_killstreak、mi_4av_killstreak",
+      "schema_version": 1,
+      "source_commit": "c0bb0c5b5cce79ff76c72da50e49971fcf78491b",
+      "files": {
+        "fm_data_db.csv": {
+          "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20260925-171135-c0bb0c5b-automatic/fm_data_db.csv",
+          "sha256": "74eab80e2caa5c0559e99754663bb258658155b63eccf003f96dd640eb6cfd2a",
+          "size": 169035
+        },
+        "fm_names_db.csv": {
+          "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20260925-171135-c0bb0c5b-automatic/fm_names_db.csv",
+          "sha256": "31b787f7bd12ea6a5df964c8a4ac8334665adbf82d40e8f3083bc2e20c9b1756",
+          "size": 74349
+        }
+      }
+    },
+    {
       "id": "fm-20260923-213029-97fe17a2-automatic",
       "published_at": "2026-09-23T21:30:29Z",
       "kind": "automatic",
