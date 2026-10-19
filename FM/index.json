@@ -3,6 +3,26 @@
   "stable_id": "fm-20260918-054634-manual",
   "versions": [
     {
+      "id": "fm-20261019-222121-e1ec959a-automatic",
+      "published_at": "2026-10-19T22:21:21Z",
+      "kind": "automatic",
+      "notes": "新增 1 条名称映射。涉及：bf-109e-3_tl",
+      "schema_version": 1,
+      "source_commit": "e1ec959a0a7f2c1f0d429b74393d187575998f27",
+      "files": {
+        "fm_data_db.csv": {
+          "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20261019-222121-e1ec959a-automatic/fm_data_db.csv",
+          "sha256": "74eab80e2caa5c0559e99754663bb258658155b63eccf003f96dd640eb6cfd2a",
+          "size": 169035
+        },
+        "fm_names_db.csv": {
+          "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20261019-222121-e1ec959a-automatic/fm_names_db.csv",
+          "sha256": "55b75b0ae257359f50a93b747dd150c169ec022c38873b258491d8062107d929",
+          "size": 74381
+        }
+      }
+    },
+    {
       "id": "fm-20260925-171135-c0bb0c5b-automatic",
       "published_at": "2026-09-25T17:11:35Z",
       "kind": "automatic",
