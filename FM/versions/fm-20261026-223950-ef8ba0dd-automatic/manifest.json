@@ -1,0 +1,20 @@
+{
+  "id": "fm-20261026-223950-ef8ba0dd-automatic",
+  "published_at": "2026-10-26T22:39:50Z",
+  "kind": "automatic",
+  "notes": "新增 1 个机型；新增 2 条名称映射。涉及：ju_88g_1_mistel、fw_190a_8_mistel、ju_88g_1_mistel",
+  "schema_version": 1,
+  "source_commit": "ef8ba0dd4d4ecdf496c483701b4851dacae4c54e",
+  "files": {
+    "fm_data_db.csv": {
+      "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20261026-223950-ef8ba0dd-automatic/fm_data_db.csv",
+      "sha256": "04ab1004be84c1e0b2deaa1cf703eb2e8ab0c39333111d7924760295cfbdde2f",
+      "size": 169199
+    },
+    "fm_names_db.csv": {
+      "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20261026-223950-ef8ba0dd-automatic/fm_names_db.csv",
+      "sha256": "debc3cca55a791129b31e4ae5565a9f4f2d05464d48aa67feb80cc1abd94ea98",
+      "size": 74457
+    }
+  }
+}

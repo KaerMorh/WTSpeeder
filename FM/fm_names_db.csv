@@ -557,6 +557,7 @@ fw-190d-9_ussr;fw-190d-9;fighter;Fw 190 D-9 (USSR)
 fw-190f-8;fw-190f-8;fighter;Fw 190 F-8
 fw_189c_0;fw_189c_0;fighter;
 fw_190a_5_u14;fw-190a-5_u14;fighter;Fw 190 A-5/U14
+fw_190a_8_mistel;fw-190a-8;fighter;
 fw_190f_8_hungary;fw-190f-8;fighter;
 fw_200c_1;fw_200c_1;bomber;Fw 200 C-1
 g4m1;g4m1;bomber;G4M1
@@ -802,6 +803,7 @@ ju-88a-1;ju-88a-1;bomber;Ju 88 A-1
 ju-88a-4;ju-88a-4;bomber;Ju 88 A-4
 ju-88a-4_finland;ju-88a-4;bomber;Ju 88 A-4 (Finland)
 ju-88c-6;ju-88c-6;bomber;Ju 88 C-6
+ju_88g_1_mistel;ju_88g_1_mistel;bomber;
 ka_29;ka_29;fighter;Ka-29
 ka_50;ka_50;fighter;Ka-50
 ka_52;ka_52;fighter;Ka-52
