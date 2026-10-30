@@ -3,6 +3,26 @@
   "stable_id": "fm-20260918-054634-manual",
   "versions": [
     {
+      "id": "fm-20261030-221934-5e2e2c6d-automatic",
+      "published_at": "2026-10-30T22:19:34Z",
+      "kind": "automatic",
+      "notes": "新增 7 个机型；更新 27 个机型的飞行限制；新增 11 条名称映射。涉及：aw_249、f_15ex、f_15ia、fulmar_mk2、q_5d、saab_jas39_pre_serie、su_15tm、a_7e、be_6、bv-238、do_217k_1、firefly_mk1 等 45 项",
+      "schema_version": 1,
+      "source_commit": "5e2e2c6d46db75372d1e412afde92be1e1163414",
+      "files": {
+        "fm_data_db.csv": {
+          "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20261030-221934-5e2e2c6d-automatic/fm_data_db.csv",
+          "sha256": "62c0def39bc7c42d48dabe57bd74b87fa6644c4281aec08b92e76cd8bb48fd99",
+          "size": 170921
+        },
+        "fm_names_db.csv": {
+          "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20261030-221934-5e2e2c6d-automatic/fm_names_db.csv",
+          "sha256": "812b8efcf9ae9ce0f39f1a3fd143b5d6108e975eaf770489efc68e5a83a864d2",
+          "size": 74809
+        }
+      }
+    },
+    {
       "id": "fm-20261026-223950-ef8ba0dd-automatic",
       "published_at": "2026-10-26T22:39:50Z",
       "kind": "automatic",
