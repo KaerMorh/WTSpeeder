@@ -3,6 +3,26 @@
   "stable_id": "fm-20260918-054634-manual",
   "versions": [
     {
+      "id": "fm-20261106-192424-6869f5d4-automatic",
+      "published_at": "2026-11-06T19:24:24Z",
+      "kind": "automatic",
+      "notes": "更新 8 个机型的飞行限制。涉及：ef_2000_aesa、ef_2000_block_10、ef_2000_typhoon_aesa、ef_2000a_aesa、f_2000a、rafale_c_f3、rafale_m_f3r、typhoon_fgr4",
+      "schema_version": 1,
+      "source_commit": "6869f5d428002e65ea6bc4965177fd1508e114f6",
+      "files": {
+        "fm_data_db.csv": {
+          "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20261106-192424-6869f5d4-automatic/fm_data_db.csv",
+          "sha256": "a365effd32e76c63842f11c2d3558876d26f2cd744f7dc55330e162fac1af526",
+          "size": 170933
+        },
+        "fm_names_db.csv": {
+          "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20261106-192424-6869f5d4-automatic/fm_names_db.csv",
+          "sha256": "812b8efcf9ae9ce0f39f1a3fd143b5d6108e975eaf770489efc68e5a83a864d2",
+          "size": 74809
+        }
+      }
+    },
+    {
       "id": "fm-20261030-221934-5e2e2c6d-automatic",
       "published_at": "2026-10-30T22:19:34Z",
       "kind": "automatic",
