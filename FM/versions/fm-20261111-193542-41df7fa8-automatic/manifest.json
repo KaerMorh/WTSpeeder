@@ -1,0 +1,20 @@
+{
+  "id": "fm-20261111-193542-41df7fa8-automatic",
+  "published_at": "2026-11-11T19:35:42Z",
+  "kind": "automatic",
+  "notes": "更新 4 个机型的飞行限制。涉及：j_10a、j_10c、rafale_c_f3、rafale_m_f3r",
+  "schema_version": 1,
+  "source_commit": "41df7fa8b2e64d303d3589dd7a14b40024a37f97",
+  "files": {
+    "fm_data_db.csv": {
+      "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20261111-193542-41df7fa8-automatic/fm_data_db.csv",
+      "sha256": "6f704b62c45a1abb6eef0831c9266940bd8b26b96d6b7171ab434f49e4e31a05",
+      "size": 170929
+    },
+    "fm_names_db.csv": {
+      "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20261111-193542-41df7fa8-automatic/fm_names_db.csv",
+      "sha256": "812b8efcf9ae9ce0f39f1a3fd143b5d6108e975eaf770489efc68e5a83a864d2",
+      "size": 74809
+    }
+  }
+}
