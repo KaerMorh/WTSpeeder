@@ -1,0 +1,20 @@
+{
+  "id": "fm-20261116-220142-9e3c2149-automatic",
+  "published_at": "2026-11-16T22:01:42Z",
+  "kind": "automatic",
+  "notes": "更新 1 个机型的飞行限制；新增 1 条名称映射。涉及：su_15tm、spad_13_event",
+  "schema_version": 1,
+  "source_commit": "9e3c21492094192ada494824ca5404af1bd1a3b6",
+  "files": {
+    "fm_data_db.csv": {
+      "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20261116-220142-9e3c2149-automatic/fm_data_db.csv",
+      "sha256": "b39c55c6576de76fc3ac49b9ba22eded1c02e9b32be3f031d04a53c5f216e59b",
+      "size": 170929
+    },
+    "fm_names_db.csv": {
+      "url": "https://raw.githubusercontent.com/KaerMorh/WTSpeeder/main/FM/versions/fm-20261116-220142-9e3c2149-automatic/fm_names_db.csv",
+      "sha256": "049a1c8391b252e1dafb8e90fc3aa7dba546f1af1e074b1860c68379719fa1f9",
+      "size": 74840
+    }
+  }
+}
